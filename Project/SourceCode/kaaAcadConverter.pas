@@ -1,154 +1,154 @@
 unit kaaAcadConverter;
-  { TODO -oKAA -c2013.05.27 : Отключить ПАРАМЕТРЫ-СИСТЕМА-ИНФОЦЕНТР-ВСПЛЫВАЮЩИЕ УВЕДОМЛЕНИЯ-ВКЛЮЧИТЬ ВСПЛЫВАЮЩИЕ УВЕДОМЛЕНИЯ ДЛЯ СЛЕДУЮЩИХ ИСТОЧНИКОВ }
+  { TODO -oKAA -c2013.05.27 : РћС‚РєР»СЋС‡РёС‚СЊ РџРђР РђРњР•РўР Р«-РЎРРЎРўР•РњРђ-РРќР¤РћР¦Р•РќРўР -Р’РЎРџР›Р«Р’РђР®Р©РР• РЈР’Р•Р”РћРњР›Р•РќРРЇ-Р’РљР›Р®Р§РРўР¬ Р’РЎРџР›Р«Р’РђР®Р©РР• РЈР’Р•Р”РћРњР›Р•РќРРЇ Р”Р›РЇ РЎР›Р•Р”РЈР®Р©РРҐ РРЎРўРћР§РќРРљРћР’ }
   
 interface
 uses Classes, SysUtils, Graphics, Types, AutoCAD_TLB;
 resourcestring
-  EacadInvalidIndex = 'Неверное значение индекса %d. Допустимый диапазон: 0..%d.';
+  EacadInvalidIndex = 'РќРµРІРµСЂРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ РёРЅРґРµРєСЃР° %d. Р”РѕРїСѓСЃС‚РёРјС‹Р№ РґРёР°РїР°Р·РѕРЅ: 0..%d.';
 type
-  //Исключительные ситуации ----------------------------------------------------
+  //РСЃРєР»СЋС‡РёС‚РµР»СЊРЅС‹Рµ СЃРёС‚СѓР°С†РёРё ----------------------------------------------------
   TacadException = class(Exception)
   public
-    //Неверное значение индекса
+    //РќРµРІРµСЂРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ РёРЅРґРµРєСЃР°
     constructor InvalidIndex(const AIndex, ACount: Integer);
   end;{TacadException}
 
-  //Тип графического объекта AutoCAD -------------------------------------------
+  //РўРёРї РіСЂР°С„РёС‡РµСЃРєРѕРіРѕ РѕР±СЉРµРєС‚Р° AutoCAD -------------------------------------------
   RacadEntityType = record
-    EntityType   : Integer; //Код типа графических объектов
-    EntityName   : String;  //Наименование типа графических объектов AutoCAD
-    Count        : Integer; //Количество всех графических объектов AutoCAD данного типа
-    ImportedCount: Integer; //Количество импортированных графических объектов AutoCAD данного типа
+    EntityType   : Integer; //РљРѕРґ С‚РёРїР° РіСЂР°С„РёС‡РµСЃРєРёС… РѕР±СЉРµРєС‚РѕРІ
+    EntityName   : String;  //РќР°РёРјРµРЅРѕРІР°РЅРёРµ С‚РёРїР° РіСЂР°С„РёС‡РµСЃРєРёС… РѕР±СЉРµРєС‚РѕРІ AutoCAD
+    Count        : Integer; //РљРѕР»РёС‡РµСЃС‚РІРѕ РІСЃРµС… РіСЂР°С„РёС‡РµСЃРєРёС… РѕР±СЉРµРєС‚РѕРІ AutoCAD РґР°РЅРЅРѕРіРѕ С‚РёРїР°
+    ImportedCount: Integer; //РљРѕР»РёС‡РµСЃС‚РІРѕ РёРјРїРѕСЂС‚РёСЂРѕРІР°РЅРЅС‹С… РіСЂР°С„РёС‡РµСЃРєРёС… РѕР±СЉРµРєС‚РѕРІ AutoCAD РґР°РЅРЅРѕРіРѕ С‚РёРїР°
   end;{RacadEntityType}
   PacadEntityType = ^RacadEntityType;
 
-  //Цвет AutoCAD ---------------------------------------------------------------
+  //Р¦РІРµС‚ AutoCAD ---------------------------------------------------------------
   RacadColor = record
     R,G,B: Byte;
   end;{RacadColor}
 
-  //Тип линии AutoCAD ----------------------------------------------------------
+  //РўРёРї Р»РёРЅРёРё AutoCAD ----------------------------------------------------------
   TacadPenStyle = (apsSolid, apsDash, apsDot, apsDashDot, apsDashDotDot, apsClear, apsInsideFrame);
-  //Тип заливки AutoCAD --------------------------------------------------------
+  //РўРёРї Р·Р°Р»РёРІРєРё AutoCAD --------------------------------------------------------
   TacadBrushStyle = (absSolid, absClear, absHorizontal, absVertical, absFDiagonal, absBDiagonal, absCross, absDiagCross);
-  //Стиль шрифта AutoCAD -------------------------------------------------------
+  //РЎС‚РёР»СЊ С€СЂРёС„С‚Р° AutoCAD -------------------------------------------------------
   TacadFontStyle = (afsNormal, afsBold, afsItalic, afsUnderline, afsStrikeout);
-  //Имя шрифта AutoCAD ---------------------------------------------------------
+  //РРјСЏ С€СЂРёС„С‚Р° AutoCAD ---------------------------------------------------------
   TacadFontName = (afnArial, afnCalibri, afnCambria, afnCourierNew, afnISOCPEUR, afnISOCTEUR, afnTimesNewRoman, afnVerdana);
-  //Горизонтальное выравнивание шрифта AutoCAD ---------------------------------
+  //Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕРµ РІС‹СЂР°РІРЅРёРІР°РЅРёРµ С€СЂРёС„С‚Р° AutoCAD ---------------------------------
   TacadHAlign = (ahaLeft, ahaCenter, ahaRight);
-  //Вертикальное выравнивание шрифта AutoCAD -----------------------------------
+  //Р’РµСЂС‚РёРєР°Р»СЊРЅРѕРµ РІС‹СЂР°РІРЅРёРІР°РЅРёРµ С€СЂРёС„С‚Р° AutoCAD -----------------------------------
   TacadVAlign = (avaTop, avaCenter, avaBottom);
-  //Направление шрифта AutoCAD -------------------------------------------------
+  //РќР°РїСЂР°РІР»РµРЅРёРµ С€СЂРёС„С‚Р° AutoCAD -------------------------------------------------
   TacadTextDirection = (atdHorizontal, atdVertical);
                            
-  //Стили шрифта AutoCAD -------------------------------------------------------
+  //РЎС‚РёР»Рё С€СЂРёС„С‚Р° AutoCAD -------------------------------------------------------
   TacadFontStyles = set of TacadFontStyle;
 
-  //Перо AutoCAD ---------------------------------------------------------------
+  //РџРµСЂРѕ AutoCAD ---------------------------------------------------------------
   RacadPen = record
-    Color: RacadColor;   //Цвет
-    Width: Double;       //Толщина линии, мм
-    Style: TacadPenStyle;//Тип линии
+    Color: RacadColor;   //Р¦РІРµС‚
+    Width: Double;       //РўРѕР»С‰РёРЅР° Р»РёРЅРёРё, РјРј
+    Style: TacadPenStyle;//РўРёРї Р»РёРЅРёРё
   end;{RacadPen}
-  //Заливка AutoCAD ------------------------------------------------------------
+  //Р—Р°Р»РёРІРєР° AutoCAD ------------------------------------------------------------
   RacadBrush = record
-    Color: RacadColor;     //Цвет
-    Style: TacadBrushStyle;//Тип заливки
+    Color: RacadColor;     //Р¦РІРµС‚
+    Style: TacadBrushStyle;//РўРёРї Р·Р°Р»РёРІРєРё
   end;{RacadBrush}
-  //Шрифт AutoCAD --------------------------------------------------------------
+  //РЁСЂРёС„С‚ AutoCAD --------------------------------------------------------------
   RacadFont = record
-    Color: RacadColor;     //Цвет
-    Size : Double;         //Размер
-    Style: TacadFontStyles;//Стиль шрифта
-    Name : TacadFontName;  //Имя шрифта
+    Color: RacadColor;     //Р¦РІРµС‚
+    Size : Double;         //Р Р°Р·РјРµСЂ
+    Style: TacadFontStyles;//РЎС‚РёР»СЊ С€СЂРёС„С‚Р°
+    Name : TacadFontName;  //РРјСЏ С€СЂРёС„С‚Р°
   end;{RacadFont}
 
-  //Координата AutoCAD ---------------------------------------------------------
+  //РљРѕРѕСЂРґРёРЅР°С‚Р° AutoCAD ---------------------------------------------------------
   TacadCoord3D = array[0..2] of Double;
-  //Координаты AutoCAD ---------------------------------------------------------
+  //РљРѕРѕСЂРґРёРЅР°С‚С‹ AutoCAD ---------------------------------------------------------
   TacadCoords3D = array of TacadCoord3D;
-  //Треугольник AutoCAD --------------------------------------------------------
+  //РўСЂРµСѓРіРѕР»СЊРЅРёРє AutoCAD --------------------------------------------------------
   RacadTriangle = record
-    p0, p1, p2: TacadCoord3D;//Вершины треугольника
+    p0, p1, p2: TacadCoord3D;//Р’РµСЂС€РёРЅС‹ С‚СЂРµСѓРіРѕР»СЊРЅРёРєР°
   end;{RacadTriangle}
-  //Треугольники AutoCAD -------------------------------------------------------
+  //РўСЂРµСѓРіРѕР»СЊРЅРёРєРё AutoCAD -------------------------------------------------------
   TacadTriangles = array of RacadTriangle;
-  //Контур AutoCAD -------------------------------------------------------------
+  //РљРѕРЅС‚СѓСЂ AutoCAD -------------------------------------------------------------
   RacadBound = record
     Min: TacadCoord3D;
     Max: TacadCoord3D;
   end;{RacadBound}
 
-  //Предопределенные классы ----------------------------------------------------
+  //РџСЂРµРґРѕРїСЂРµРґРµР»РµРЅРЅС‹Рµ РєР»Р°СЃСЃС‹ ----------------------------------------------------
   TacadLayer = class; 
   TacadBlock = class;
 
-  //Глобальный объект AutoCAD --------------------------------------------------
+  //Р“Р»РѕР±Р°Р»СЊРЅС‹Р№ РѕР±СЉРµРєС‚ AutoCAD --------------------------------------------------
   TacadObject = class
-  public//Конструктор/деструктор
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); virtual;
   end;{TacadObject}
 
-  //Графический объект AutoCAD -------------------------------------------------
+  //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚ AutoCAD -------------------------------------------------
   TacadGraphObject = class(TacadObject)
   private
-    FBound  : RacadBound;  //Контур
-    FCenter : TacadCoord3D;//Центр
-    FVisible: Boolean;        //Признак видимости
-  public//Конструктор/деструктор
+    FBound  : RacadBound;  //РљРѕРЅС‚СѓСЂ
+    FCenter : TacadCoord3D;//Р¦РµРЅС‚СЂ
+    FVisible: Boolean;        //РџСЂРёР·РЅР°Рє РІРёРґРёРјРѕСЃС‚Рё
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
-  protected//Методы
-    //Прорисовка на канвасе
+  protected//РњРµС‚РѕРґС‹
+    //РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
     procedure DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound); virtual;
-    //Определение контура и центра
+    //РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР° Рё С†РµРЅС‚СЂР°
     procedure _DefineBound(); virtual;
-  protected//Свойства
-    //Общие
+  protected//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property Bound  : RacadBound read FBound;
     property Center : TacadCoord3D read FCenter;
     property Visible: Boolean read FVisible;
   end;{TacadGraphObject}
 
-  //Объект слоя AutoCAD --------------------------------------------------------
+  //РћР±СЉРµРєС‚ СЃР»РѕСЏ AutoCAD --------------------------------------------------------
   TacadLayerObject = class(TacadGraphObject)
   private
-    FEntityType: Integer; //Тип объекта AutoCAD
-  public//Конструктор/деструктор
+    FEntityType: Integer; //РўРёРї РѕР±СЉРµРєС‚Р° AutoCAD
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
-  protected//Методы
-    //Наименование класса объекта AutoCAD
+  protected//РњРµС‚РѕРґС‹
+    //РќР°РёРјРµРЅРѕРІР°РЅРёРµ РєР»Р°СЃСЃР° РѕР±СЉРµРєС‚Р° AutoCAD
     function GetEntityName(): String;
-    //Обработка объекта AutoCAD
+    //РћР±СЂР°Р±РѕС‚РєР° РѕР±СЉРµРєС‚Р° AutoCAD
     procedure ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock); virtual;
-  protected//Свойства
-    //Общие
+  protected//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType: Integer read FEntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
   end;{TacadLayerObject}
   TacadLayerObjectRef = class of TacadLayerObject;
 
-  //Объект AutoCAD "Точка" -----------------------------------------------------
+  //РћР±СЉРµРєС‚ AutoCAD "РўРѕС‡РєР°" -----------------------------------------------------
   TacadPoint = class(TacadLayerObject)
   private
-    FColor: RacadColor;  //Цвет
-    FSize : Double;         //Толщина, мм
-  public//Конструктор/деструктор
+    FColor: RacadColor;  //Р¦РІРµС‚
+    FSize : Double;         //РўРѕР»С‰РёРЅР°, РјРј
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
-  public//Методы
-    //Обработка точки AutoCAD
+  public//РњРµС‚РѕРґС‹
+    //РћР±СЂР°Р±РѕС‚РєР° С‚РѕС‡РєРё AutoCAD
     procedure ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock); override;
-    //Прорисовка на канвасе
+    //РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
     procedure DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound); override;
-    //Определение контура и центра
+    //РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР° Рё С†РµРЅС‚СЂР°
     procedure _DefineBound(); override;
-  public//Свойства
-    //Общие
+  public//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -157,35 +157,35 @@ type
     property Size : Double read FSize;
   end;{TacadPoint}
 
-  //Пользовательский объект CustomPolyline -------------------------------------
+  //РџРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёР№ РѕР±СЉРµРєС‚ CustomPolyline -------------------------------------
   TacadCustomPolyline = class(TacadLayerObject)
   private
-    FPen        : RacadPen;     //Перо
-    FCoords     : TacadCoords3D;//Вершины
-    FCoordsCount: Integer;         //Количество вершин
-    FPerimeter  : Double;          //Периметр
-  private//Методы диспетчеризации свойств
+    FPen        : RacadPen;     //РџРµСЂРѕ
+    FCoords     : TacadCoords3D;//Р’РµСЂС€РёРЅС‹
+    FCoordsCount: Integer;         //РљРѕР»РёС‡РµСЃС‚РІРѕ РІРµСЂС€РёРЅ
+    FPerimeter  : Double;          //РџРµСЂРёРјРµС‚СЂ
+  private//РњРµС‚РѕРґС‹ РґРёСЃРїРµС‚С‡РµСЂРёР·Р°С†РёРё СЃРІРѕР№СЃС‚РІ
     function GetCoord(const AIndex: Integer): TacadCoord3D;
     function _GetCoord(const AIndex: Integer): TacadCoord3D;
-  protected//Методы
-    //Прорисовка на канвасе
+  protected//РњРµС‚РѕРґС‹
+    //РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
     procedure _DrawPlineToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound; const AClosed: Boolean = False);
-    //Определение контура и центра
+    //РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР° Рё С†РµРЅС‚СЂР°
     procedure _DefineBound(); override;
-    //Расчет точек контура
+    //Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР°
     procedure _DefineAdditional(); virtual;
-  protected//Методы
-    //Прорисовка на канвасе
+  protected//РњРµС‚РѕРґС‹
+    //РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
     procedure DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound); override;
-  public//Конструктор/деструктор
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
     destructor Destroy(); override;
-  protected//Свойства
+  protected//РЎРІРѕР№СЃС‚РІР°
     property _Coords[const AIndex: Integer]: TacadCoord3D read _GetCoord;
-  protected//Свойства
-    //Общие
+  protected//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -196,37 +196,37 @@ type
     property Perimeter  : Double read FPerimeter;
   end;{TacadCustomPolyline}
 
-  //Блок AutoCAD ---------------------------------------------------------------
+  //Р‘Р»РѕРє AutoCAD ---------------------------------------------------------------
   TacadBlock = class(TacadLayerObject)
   private
-    FName      : String;     //Имя блока
-    FDefaultPen: RacadPen;//Перо по умолчанию
-    FItems     : TList;      //Объекты
-    FCount     : Integer;    //Количество объектов
-  private//Методы диспетчеризации свойств
+    FName      : String;     //РРјСЏ Р±Р»РѕРєР°
+    FDefaultPen: RacadPen;//РџРµСЂРѕ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
+    FItems     : TList;      //РћР±СЉРµРєС‚С‹
+    FCount     : Integer;    //РљРѕР»РёС‡РµСЃС‚РІРѕ РѕР±СЉРµРєС‚РѕРІ
+  private//РњРµС‚РѕРґС‹ РґРёСЃРїРµС‚С‡РµСЂРёР·Р°С†РёРё СЃРІРѕР№СЃС‚РІ
     function GetItem(const AIndex: Integer): TacadLayerObject;
     function _GetItem(const AIndex: Integer): TacadLayerObject;
-  protected//Методы
-    //Прорисовка на канвасе
+  protected//РњРµС‚РѕРґС‹
+    //РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
     procedure DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound); override;
-    //Очистка
+    //РћС‡РёСЃС‚РєР°
     procedure Clear();
-    //Добавление объекта
+    //Р”РѕР±Р°РІР»РµРЅРёРµ РѕР±СЉРµРєС‚Р°
     procedure Add(const AObject: TacadLayerObject);
-    //Определение контура
+    //РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР°
     procedure _DefineBound(); override;
-  public//Методы
-    //Обработка блока AutoCAD
+  public//РњРµС‚РѕРґС‹
+    //РћР±СЂР°Р±РѕС‚РєР° Р±Р»РѕРєР° AutoCAD
     procedure ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock); override;
-    //Обработка объектов блока AutoCAD
+    //РћР±СЂР°Р±РѕС‚РєР° РѕР±СЉРµРєС‚РѕРІ Р±Р»РѕРєР° AutoCAD
     procedure ExtractAcadEntityDn(const ALayer: TacadLayer; const AAcadBlocks: IAcadBlocks);
-  public//Конструктор/деструктор
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
     destructor Destroy(); override;
-  protected//Свойства
+  protected//РЎРІРѕР№СЃС‚РІР°
     property _Items[const AIndex: Integer]: TacadLayerObject read _GetItem;
-  public//Свойства
-    //Графический объект
+  public//РЎРІРѕР№СЃС‚РІР°
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -237,18 +237,18 @@ type
     property Count: Integer read FCount;
   end;{TacadBlock}
 
-  //Объект AutoCAD "Линия" -----------------------------------------------------
+  //РћР±СЉРµРєС‚ AutoCAD "Р›РёРЅРёСЏ" -----------------------------------------------------
   TacadLine = class(TacadCustomPolyline)
-  private//Методы диспетчеризации свойств
+  private//РњРµС‚РѕРґС‹ РґРёСЃРїРµС‚С‡РµСЂРёР·Р°С†РёРё СЃРІРѕР№СЃС‚РІ
     function GetStartPoint(): TacadCoord3D;
     function GetEndPoint(): TacadCoord3D;
-  public//Методы
-    //Обработка линии AutoCAD
+  public//РњРµС‚РѕРґС‹
+    //РћР±СЂР°Р±РѕС‚РєР° Р»РёРЅРёРё AutoCAD
     procedure ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock); override;
-  public//Свойства
-    //Общие
+  public//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -262,23 +262,23 @@ type
     property EndPoint  : TacadCoord3D read GetEndPoint;
   end;{TacadLine}
 
-  //Объект AutoCAD "Полилиния" -------------------------------------------------
+  //РћР±СЉРµРєС‚ AutoCAD "РџРѕР»РёР»РёРЅРёСЏ" -------------------------------------------------
   TacadPolyline = class(TacadCustomPolyline)
   private
-    FClosed: Boolean;//Признак замкнутости полилинии
-  public//Конструктор/деструктор
+    FClosed: Boolean;//РџСЂРёР·РЅР°Рє Р·Р°РјРєРЅСѓС‚РѕСЃС‚Рё РїРѕР»РёР»РёРЅРёРё
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
-  public//Методы
-    //Обработка полилинии AutoCAD
+  public//РњРµС‚РѕРґС‹
+    //РћР±СЂР°Р±РѕС‚РєР° РїРѕР»РёР»РёРЅРёРё AutoCAD
     procedure ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock); override;
-    //Прорисовка на канвасе
+    //РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
     procedure DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound); override;
-    //Определение контура и центра
+    //РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР° Рё С†РµРЅС‚СЂР°
     procedure _DefineBound(); override;
-  public//Свойства
-    //Общие
+  public//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -291,23 +291,23 @@ type
     property Closed: Boolean read FClosed;
   end;{TacadPolyline}
 
-  //Объект AutoCAD "3D Полилиния" ----------------------------------------------
+  //РћР±СЉРµРєС‚ AutoCAD "3D РџРѕР»РёР»РёРЅРёСЏ" ----------------------------------------------
   Tacad3DPolyline = class(TacadCustomPolyline)
   private
-    FClosed: Boolean;//Признак замкнутости полилинии
-  public//Конструктор/деструктор
+    FClosed: Boolean;//РџСЂРёР·РЅР°Рє Р·Р°РјРєРЅСѓС‚РѕСЃС‚Рё РїРѕР»РёР»РёРЅРёРё
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
-  public//Методы
-    //Обработка полилинии AutoCAD
+  public//РњРµС‚РѕРґС‹
+    //РћР±СЂР°Р±РѕС‚РєР° РїРѕР»РёР»РёРЅРёРё AutoCAD
     procedure ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock); override;
-    //Прорисовка на канвасе
+    //РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
     procedure DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound); override;
-    //Определение контура и центра
+    //РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР° Рё С†РµРЅС‚СЂР°
     procedure _DefineBound(); override;
-  public//Свойства
-    //Общие
+  public//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -320,26 +320,26 @@ type
     property Closed: Boolean read FClosed;
   end;{TacadPolyline}
 
-  //Объект AutoCAD "Дуга" ------------------------------------------------------
+  //РћР±СЉРµРєС‚ AutoCAD "Р”СѓРіР°" ------------------------------------------------------
   TacadArc = class(TacadCustomPolyline)
   private
-    FRadius    : Double;         //Радиус
-    FStartPoint: TacadCoord3D;//Начальная точка
-    FEndPoint  : TacadCoord3D;//Конечная точка
-    FStartAngle: Double;         //Начальный угол, рад.
-    FEndAngle  : Double;         //Конечный угол, рад.
-  public//Конструктор/деструктор
+    FRadius    : Double;         //Р Р°РґРёСѓСЃ
+    FStartPoint: TacadCoord3D;//РќР°С‡Р°Р»СЊРЅР°СЏ С‚РѕС‡РєР°
+    FEndPoint  : TacadCoord3D;//РљРѕРЅРµС‡РЅР°СЏ С‚РѕС‡РєР°
+    FStartAngle: Double;         //РќР°С‡Р°Р»СЊРЅС‹Р№ СѓРіРѕР», СЂР°Рґ.
+    FEndAngle  : Double;         //РљРѕРЅРµС‡РЅС‹Р№ СѓРіРѕР», СЂР°Рґ.
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
-  public//Методы
-    //Обработка дуги AutoCAD
+  public//РњРµС‚РѕРґС‹
+    //РћР±СЂР°Р±РѕС‚РєР° РґСѓРіРё AutoCAD
     procedure ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock); override;
-  protected//Внутренние методы
-    //Расчет точек контура
+  protected//Р’РЅСѓС‚СЂРµРЅРЅРёРµ РјРµС‚РѕРґС‹
+    //Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР°
     procedure _DefineAdditional(); override;
-  public//Свойства
-    //Общие
+  public//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -356,33 +356,33 @@ type
     property EndAngle  : Double read FEndAngle;
   end;{TacadArc}
 
-  //Тип сплайна ----------------------------------------------------------------
+  //РўРёРї СЃРїР»Р°Р№РЅР° ----------------------------------------------------------------
   TacadSplineKind = (askQuadratic, ascCubic);//? 
-  //Объект AutoCAD "Сплайн" ----------------------------------------------------
+  //РћР±СЉРµРєС‚ AutoCAD "РЎРїР»Р°Р№РЅ" ----------------------------------------------------
   TacadSpline = class(TacadCustomPolyline)
   private
-    FClosed    : Boolean;           //Признак замкнутости сплайна
-    FNodes     : TacadCoords3D;  //Определяющие вершины
-    FNodesCount: Integer;           //Количество определяющих вершин
-    FKind      : TacadSplineKind;//Тип сплайна
-  private//Методы диспетчеризации свойств
+    FClosed    : Boolean;           //РџСЂРёР·РЅР°Рє Р·Р°РјРєРЅСѓС‚РѕСЃС‚Рё СЃРїР»Р°Р№РЅР°
+    FNodes     : TacadCoords3D;  //РћРїСЂРµРґРµР»СЏСЋС‰РёРµ РІРµСЂС€РёРЅС‹
+    FNodesCount: Integer;           //РљРѕР»РёС‡РµСЃС‚РІРѕ РѕРїСЂРµРґРµР»СЏСЋС‰РёС… РІРµСЂС€РёРЅ
+    FKind      : TacadSplineKind;//РўРёРї СЃРїР»Р°Р№РЅР°
+  private//РњРµС‚РѕРґС‹ РґРёСЃРїРµС‚С‡РµСЂРёР·Р°С†РёРё СЃРІРѕР№СЃС‚РІ
     function GetNode(const AIndex: Integer): TacadCoord3D;
     function _GetNode(const AIndex: Integer): TacadCoord3D;
-  public//Конструктор/деструктор
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
     destructor Destroy(); override;
-  public//Методы
-    //Обработка сплайна AutoCAD
+  public//РњРµС‚РѕРґС‹
+    //РћР±СЂР°Р±РѕС‚РєР° СЃРїР»Р°Р№РЅР° AutoCAD
     procedure ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock); override;
-  protected//Внутренние методы
-    //Расчет точек контура
+  protected//Р’РЅСѓС‚СЂРµРЅРЅРёРµ РјРµС‚РѕРґС‹
+    //Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР°
     procedure _DefineAdditional(); override;
-  protected//Свойства
+  protected//РЎРІРѕР№СЃС‚РІР°
     property _Nodes[const AIndex: Integer]: TacadCoord3D read _GetNode;
-  public//Свойства
-    //Общие
+  public//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -397,35 +397,35 @@ type
     property NodesCount: Integer read FNodesCount;
   end;{TacadSpline}
 
-  //Пользовательский объект CustomPolygon --------------------------------------
+  //РџРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёР№ РѕР±СЉРµРєС‚ CustomPolygon --------------------------------------
   TacadCustomPolygon = class(TacadCustomPolyline)
   private
-    FBrush         : RacadBrush;    //Заливка
-    FArea          : Double;           //Площадь
-    FTriangles     : TacadTriangles;//Треугольники
-    FTrianglesCount: Integer;          //Количество треугольников
-  private//Методы диспетчеризации свойств
+    FBrush         : RacadBrush;    //Р—Р°Р»РёРІРєР°
+    FArea          : Double;           //РџР»РѕС‰Р°РґСЊ
+    FTriangles     : TacadTriangles;//РўСЂРµСѓРіРѕР»СЊРЅРёРєРё
+    FTrianglesCount: Integer;          //РљРѕР»РёС‡РµСЃС‚РІРѕ С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
+  private//РњРµС‚РѕРґС‹ РґРёСЃРїРµС‚С‡РµСЂРёР·Р°С†РёРё СЃРІРѕР№СЃС‚РІ
     function GetTriangle(const AIndex: Integer): RacadTriangle;
     function _GetTriangle(const AIndex: Integer): RacadTriangle;
-  public//Конструктор/деструктор
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
     destructor Destroy(); override;
   protected
-    //Прорисовка на канвасе
+    //РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
     procedure _DrawPgonToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound);
-  protected//Методы
-    //Прорисовка на канвасе
+  protected//РњРµС‚РѕРґС‹
+    //РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
     procedure DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound); override;
-    //Определение контура и центра
+    //РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР° Рё С†РµРЅС‚СЂР°
     procedure _DefineBound(); override;
-    //Расчет точек контура и треугольников
+    //Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР° Рё С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
     procedure _DefineAdditional(); override;
-  protected//Свойства
+  protected//РЎРІРѕР№СЃС‚РІР°
     property _Triangles[const AIndex: Integer]: RacadTriangle read _GetTriangle;
-  protected//Свойства
-    //Общие
+  protected//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -441,18 +441,18 @@ type
     property TrianglesCount: Integer read FTrianglesCount;
   end;{TacadCustomPolygon}
   
-  //Объект AutoCAD "Полигон" ---------------------------------------------------
+  //РћР±СЉРµРєС‚ AutoCAD "РџРѕР»РёРіРѕРЅ" ---------------------------------------------------
   TacadPolygon = class(TacadCustomPolygon)
-  public//Методы
-    //Обработка полигона AutoCAD
+  public//РњРµС‚РѕРґС‹
+    //РћР±СЂР°Р±РѕС‚РєР° РїРѕР»РёРіРѕРЅР° AutoCAD
     procedure ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock); override;
-  protected//Внутренние методы
-    //Расчет точек контура и треугольников
+  protected//Р’РЅСѓС‚СЂРµРЅРЅРёРµ РјРµС‚РѕРґС‹
+    //Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР° Рё С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
     procedure _DefineAdditional(); override;
-  public//Свойства
-    //Общие
+  public//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -462,7 +462,7 @@ type
     //CustomPolygon
     property Brush;
     property Area;
-  protected//Свойства
+  protected//РЎРІРѕР№СЃС‚РІР°
     //CustomPolyline
     property Coords;
     property CoordsCount;
@@ -470,22 +470,22 @@ type
     property TrianglesCount;
   end;{TacadPolygon}
 
-  //Объект AutoCAD "Круг" ------------------------------------------------------
+  //РћР±СЉРµРєС‚ AutoCAD "РљСЂСѓРі" ------------------------------------------------------
   TacadCircle = class(TacadCustomPolygon)
   private
-    FRadius: Double;//Радиус
-  public//Конструктор/деструктор
+    FRadius: Double;//Р Р°РґРёСѓСЃ
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
-  public//Методы
-    //Обработка круга AutoCAD
+  public//РњРµС‚РѕРґС‹
+    //РћР±СЂР°Р±РѕС‚РєР° РєСЂСѓРіР° AutoCAD
     procedure ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock); override;
-  protected//Внутренние методы
-    //Расчет точек контура и треугольников
+  protected//Р’РЅСѓС‚СЂРµРЅРЅРёРµ РјРµС‚РѕРґС‹
+    //Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР° Рё С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
     procedure _DefineAdditional(); override;
-  public//Свойства
-    //Общие
+  public//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -497,7 +497,7 @@ type
     property Area;
     //Circle
     property Radius: Double read FRadius;
-  protected//Свойства
+  protected//РЎРІРѕР№СЃС‚РІР°
     //CustomPolyline
     property Coords;
     property CoordsCount;
@@ -505,24 +505,24 @@ type
     property TrianglesCount;
   end;{TacadCircle}
 
-  //Объект AutoCAD "Эллипс" ----------------------------------------------------
+  //РћР±СЉРµРєС‚ AutoCAD "Р­Р»Р»РёРїСЃ" ----------------------------------------------------
   TacadEllipse = class(TacadCustomPolygon)
   private
-    FMajorRadius: Double;//Большая полуось
-    FMinorRadius: Double;//Малая полуось
-    FMajorAxis  : Double;//Вектор X большей полуоси
-  public//Конструктор/деструктор
+    FMajorRadius: Double;//Р‘РѕР»СЊС€Р°СЏ РїРѕР»СѓРѕСЃСЊ
+    FMinorRadius: Double;//РњР°Р»Р°СЏ РїРѕР»СѓРѕСЃСЊ
+    FMajorAxis  : Double;//Р’РµРєС‚РѕСЂ X Р±РѕР»СЊС€РµР№ РїРѕР»СѓРѕСЃРё
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
-  public//Методы
-    //Обработка эллипса AutoCAD
+  public//РњРµС‚РѕРґС‹
+    //РћР±СЂР°Р±РѕС‚РєР° СЌР»Р»РёРїСЃР° AutoCAD
     procedure ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock); override;
-  protected//Внутренние методы
-    //Расчет точек контура и треугольников
+  protected//Р’РЅСѓС‚СЂРµРЅРЅРёРµ РјРµС‚РѕРґС‹
+    //Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР° Рё С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
     procedure _DefineAdditional(); override;
-  public//Свойства
-    //Общие
+  public//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -536,7 +536,7 @@ type
     property MajorRadius: Double read FMajorRadius;
     property MinorRadius: Double read FMinorRadius;
     property MajorAxis  : Double read FMajorAxis;
-  protected//Свойства
+  protected//РЎРІРѕР№СЃС‚РІР°
     //CustomPolyline
     property Coords;
     property CoordsCount;
@@ -544,30 +544,30 @@ type
     property TrianglesCount;
   end;{TacadEllipse}
 
-  //Объект AutoCAD "Текст" -----------------------------------------------------
+  //РћР±СЉРµРєС‚ AutoCAD "РўРµРєСЃС‚" -----------------------------------------------------
   TacadText = class(TacadCustomPolygon)
   private
-    FFont         : RacadFont;         //Шрифт
-    FCaption      : String;               //Заголовок
-    FHAlign       : TacadHAlign;       //Горизонтальное выравнивание
-    FVAlign       : TacadVAlign;       //Вертикальное выравнивание
-    FRotation     : Double;               //Поворот текста, град. 0-360
-    FScaleFactor  : Double;               //Коэффициент плотности, 0-1
-    FObliqueAngle : Double;               //Угол наклона
-    FTextDirection: TacadTextDirection;//Направление
-    FUpsideDown   : Boolean;              //Признак перевернутого текста
-    FBackward     : Boolean;              //Признак обратного написания
-  public//Конструктор/деструктор
+    FFont         : RacadFont;         //РЁСЂРёС„С‚
+    FCaption      : String;               //Р—Р°РіРѕР»РѕРІРѕРє
+    FHAlign       : TacadHAlign;       //Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕРµ РІС‹СЂР°РІРЅРёРІР°РЅРёРµ
+    FVAlign       : TacadVAlign;       //Р’РµСЂС‚РёРєР°Р»СЊРЅРѕРµ РІС‹СЂР°РІРЅРёРІР°РЅРёРµ
+    FRotation     : Double;               //РџРѕРІРѕСЂРѕС‚ С‚РµРєСЃС‚Р°, РіСЂР°Рґ. 0-360
+    FScaleFactor  : Double;               //РљРѕСЌС„С„РёС†РёРµРЅС‚ РїР»РѕС‚РЅРѕСЃС‚Рё, 0-1
+    FObliqueAngle : Double;               //РЈРіРѕР» РЅР°РєР»РѕРЅР°
+    FTextDirection: TacadTextDirection;//РќР°РїСЂР°РІР»РµРЅРёРµ
+    FUpsideDown   : Boolean;              //РџСЂРёР·РЅР°Рє РїРµСЂРµРІРµСЂРЅСѓС‚РѕРіРѕ С‚РµРєСЃС‚Р°
+    FBackward     : Boolean;              //РџСЂРёР·РЅР°Рє РѕР±СЂР°С‚РЅРѕРіРѕ РЅР°РїРёСЃР°РЅРёСЏ
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
-  public//Методы
-    //Обработка текста AutoCAD
+  public//РњРµС‚РѕРґС‹
+    //РћР±СЂР°Р±РѕС‚РєР° С‚РµРєСЃС‚Р° AutoCAD
     procedure ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock); override;
-    //Прорисовка на канвасе
+    //РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
     procedure DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound); override;
-  protected//Свойства
-    //Общие
+  protected//РЎРІРѕР№СЃС‚РІР°
+    //РћР±С‰РёРµ
     property EntityType;
-    //Графический объект
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -592,35 +592,35 @@ type
     property Backward     : Boolean read FBackward;
   end;{TacadText}
 
-  //Слой AutoCAD ---------------------------------------------------------------
+  //РЎР»РѕР№ AutoCAD ---------------------------------------------------------------
   TacadLayer = class(TacadGraphObject)
   private
-    FName          : String;     //Название слоя
-    FFreeze        : Boolean;    //Признак замораживания слоя - невидимы, исключены из процессов регенерации и печати
-    FLock          : Boolean;    //Признак запрета редактирования объектов слоя
-    FDefaultPen    : RacadPen;//Перо по умолчанию
-    FDescription   : String;     //Примечание
-    FItems         : TList;      //Объекты
-    FCount         : Integer;    //Количество объектов
-  private//Методы диспетчеризации свойств
+    FName          : String;     //РќР°Р·РІР°РЅРёРµ СЃР»РѕСЏ
+    FFreeze        : Boolean;    //РџСЂРёР·РЅР°Рє Р·Р°РјРѕСЂР°Р¶РёРІР°РЅРёСЏ СЃР»РѕСЏ - РЅРµРІРёРґРёРјС‹, РёСЃРєР»СЋС‡РµРЅС‹ РёР· РїСЂРѕС†РµСЃСЃРѕРІ СЂРµРіРµРЅРµСЂР°С†РёРё Рё РїРµС‡Р°С‚Рё
+    FLock          : Boolean;    //РџСЂРёР·РЅР°Рє Р·Р°РїСЂРµС‚Р° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ РѕР±СЉРµРєС‚РѕРІ СЃР»РѕСЏ
+    FDefaultPen    : RacadPen;//РџРµСЂРѕ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
+    FDescription   : String;     //РџСЂРёРјРµС‡Р°РЅРёРµ
+    FItems         : TList;      //РћР±СЉРµРєС‚С‹
+    FCount         : Integer;    //РљРѕР»РёС‡РµСЃС‚РІРѕ РѕР±СЉРµРєС‚РѕРІ
+  private//РњРµС‚РѕРґС‹ РґРёСЃРїРµС‚С‡РµСЂРёР·Р°С†РёРё СЃРІРѕР№СЃС‚РІ
     function GetItem(const AIndex: Integer): TacadLayerObject;
     function _GetItem(const AIndex: Integer): TacadLayerObject;
-  protected//Методы
-    //Прорисовка на канвасе
+  protected//РњРµС‚РѕРґС‹
+    //РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
     procedure DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound); override;
-    //Очистка
+    //РћС‡РёСЃС‚РєР°
     procedure Clear();
-    //Добавление объекта
+    //Р”РѕР±Р°РІР»РµРЅРёРµ РѕР±СЉРµРєС‚Р°
     procedure Add(const AObject: TacadLayerObject);
-    //Определение контура
+    //РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР°
     procedure _DefineBound(); override;
-  public//Конструктор/деструктор
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
     destructor Destroy(); override;
-  protected//Свойства
+  protected//РЎРІРѕР№СЃС‚РІР°
     property _Items[const AIndex: Integer]: TacadLayerObject read _GetItem;
-  public//Свойства
-    //Графический объект
+  public//РЎРІРѕР№СЃС‚РІР°
+    //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
     property Bound;
     property Center;
     property Visible;
@@ -634,67 +634,67 @@ type
     property Count: Integer read FCount;
   end;{TacadLayer}
 
-  //Статистика типов объектов AutoCAD ------------------------------------------
+  //РЎС‚Р°С‚РёСЃС‚РёРєР° С‚РёРїРѕРІ РѕР±СЉРµРєС‚РѕРІ AutoCAD ------------------------------------------
   TacadEntitiesStatistic = class(TacadObject)
   private
     FItems: TList;
     FCount: Integer;
-  private//Методы диспетчеризации свойств
+  private//РњРµС‚РѕРґС‹ РґРёСЃРїРµС‚С‡РµСЂРёР·Р°С†РёРё СЃРІРѕР№СЃС‚РІ
     function _GetItem(const AIndex: Integer): RacadEntityType;
     function GetItem(const AIndex: Integer): RacadEntityType;
-  protected//Методы
-  public//Методы - временно public
-    //Добавление
+  protected//РњРµС‚РѕРґС‹
+  public//РњРµС‚РѕРґС‹ - РІСЂРµРјРµРЅРЅРѕ public
+    //Р”РѕР±Р°РІР»РµРЅРёРµ
     procedure Add(const AEntityType: Integer; const AEntityName: String; const AUnknown: Boolean = False);
-  protected//Методы
-    //Очистка
+  protected//РњРµС‚РѕРґС‹
+    //РћС‡РёСЃС‚РєР°
     procedure Clear();
-  public//Методы - временно public
-    //Поиск
+  public//РњРµС‚РѕРґС‹ - РІСЂРµРјРµРЅРЅРѕ public
+    //РџРѕРёСЃРє
     function IndexOf(const AEntityType: Integer): Integer;
-  public//Конструктор/деструктор
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); override;
     destructor Destroy(); override;
-  protected//Свойства
+  protected//РЎРІРѕР№СЃС‚РІР°
     property _Items[const AIndex: Integer]: RacadEntityType read _GetItem;
-  public//Свойства
+  public//РЎРІРѕР№СЃС‚РІР°
     property Items[const AIndex: Integer]: RacadEntityType read GetItem; default;
     property Count: Integer read FCount;
   end;{TacadEntitiesStatistic}
 
-  //Приложение AutoCAD ---------------------------------------------------------
+  //РџСЂРёР»РѕР¶РµРЅРёРµ AutoCAD ---------------------------------------------------------
   TAutoCAD = class
   private
-    FCubeBound  : RacadBound;            //Контур слоев
-    FCenter     : TacadCoord3D;          //Центр куба данных
-    FStatistics : TacadEntitiesStatistic;//Статистика объектов
-    FLayers     : TList;                    //Слои
-    FLayersCount: Integer;                  //Количество слоев
-  private//Методы диспетчеризации свойств
+    FCubeBound  : RacadBound;            //РљРѕРЅС‚СѓСЂ СЃР»РѕРµРІ
+    FCenter     : TacadCoord3D;          //Р¦РµРЅС‚СЂ РєСѓР±Р° РґР°РЅРЅС‹С…
+    FStatistics : TacadEntitiesStatistic;//РЎС‚Р°С‚РёСЃС‚РёРєР° РѕР±СЉРµРєС‚РѕРІ
+    FLayers     : TList;                    //РЎР»РѕРё
+    FLayersCount: Integer;                  //РљРѕР»РёС‡РµСЃС‚РІРѕ СЃР»РѕРµРІ
+  private//РњРµС‚РѕРґС‹ РґРёСЃРїРµС‚С‡РµСЂРёР·Р°С†РёРё СЃРІРѕР№СЃС‚РІ
     function GetLayer(const AIndex: Integer): TacadLayer;
     function _GetLayer(const AIndex: Integer): TacadLayer;
-  protected//Методы
-    //Извлечение слоя AutoCAD
+  protected//РњРµС‚РѕРґС‹
+    //РР·РІР»РµС‡РµРЅРёРµ СЃР»РѕСЏ AutoCAD
     procedure _ExtractAutoCADLayer(const AacadLayer: IAcadLayer);
-    //Поиск слоя
+    //РџРѕРёСЃРє СЃР»РѕСЏ
     function _FindLayer(const ALayerName: String): Integer;
-    //Уничтожение слоев
+    //РЈРЅРёС‡С‚РѕР¶РµРЅРёРµ СЃР»РѕРµРІ
     procedure _ClearLayers();
-    //Определение глобального контура
+    //РћРїСЂРµРґРµР»РµРЅРёРµ РіР»РѕР±Р°Р»СЊРЅРѕРіРѕ РєРѕРЅС‚СѓСЂР°
     procedure _DefineBound();
-  public//Методы
-    //Прорисовка
+  public//РњРµС‚РѕРґС‹
+    //РџСЂРѕСЂРёСЃРѕРІРєР°
     procedure Draw(const ACanvas: TCanvas; const ACanvasBound: TRect);
-    //Очистка
+    //РћС‡РёСЃС‚РєР°
     procedure Clear();
-    //Импорт из файла AutoCAD
+    //РРјРїРѕСЂС‚ РёР· С„Р°Р№Р»Р° AutoCAD
     function ImportFromAutoCADFile(const AFileName: String): Boolean;
-  public//Конструктор/деструктор
+  public//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
     constructor Create(); virtual;
     destructor Destroy(); override;
-  protected//Свойства
+  protected//РЎРІРѕР№СЃС‚РІР°
     property _Layers[const AIndex: Integer]: TacadLayer read _GetLayer;
-  public//Свойства
+  public//РЎРІРѕР№СЃС‚РІР°
     property CubeBound: RacadBound read FCubeBound;
     property Center: TacadCoord3D read FCenter;
     property Layers[const AIndex: Integer]: TacadLayer read GetLayer; default;
@@ -702,60 +702,60 @@ type
     property Statistics: TacadEntitiesStatistic read FStatistics;
   end;{TAutoCAD}
   
-//Цвет AutoCAD -----------------------------------------------------------------
+//Р¦РІРµС‚ AutoCAD -----------------------------------------------------------------
 function acadColor(const AR,AG,AB: Byte): RacadColor;
-//Перо AutoCAD -----------------------------------------------------------------
+//РџРµСЂРѕ AutoCAD -----------------------------------------------------------------
 function acadPen(const AColor: RacadColor; const AWidth: Double; const AStyle: TacadPenStyle): RacadPen;
-//Заливка AutoCAD --------------------------------------------------------------
+//Р—Р°Р»РёРІРєР° AutoCAD --------------------------------------------------------------
 function acadBrush(const AColor: RacadColor; const AStyle: TacadBrushStyle): RacadBrush;
-//Шрифт AutoCAD ----------------------------------------------------------------
+//РЁСЂРёС„С‚ AutoCAD ----------------------------------------------------------------
 function acadFont(const AColor: RacadColor; const ASize: Double; const AStyle: TacadFontStyles; const AName: TacadFontName): RacadFont;
-//Координата AutoCAD -----------------------------------------------------------
+//РљРѕРѕСЂРґРёРЅР°С‚Р° AutoCAD -----------------------------------------------------------
 function acadCoord3D(): TacadCoord3D; overload;
 function acadCoord3D(const AX,AY,AZ: Double): TacadCoord3D; overload;
-//Контур AutoCAD ---------------------------------------------------------------
+//РљРѕРЅС‚СѓСЂ AutoCAD ---------------------------------------------------------------
 function acadBound(): RacadBound; overload;
 function acadBound(const AMin, AMax: TacadCoord3D): RacadBound; overload;
 function acadCenter(const ABound: RacadBound): TacadCoord3D; 
-//Перевод мировых координат в экранные
+//РџРµСЂРµРІРѕРґ РјРёСЂРѕРІС‹С… РєРѕРѕСЂРґРёРЅР°С‚ РІ СЌРєСЂР°РЅРЅС‹Рµ
 function acadCoordTo(const AX,AY: Double; const ACanvasBound: TRect; const ACubeBound: RacadBound): TPoint;
-//Общие ------------------------------------------------------------------------
-//Пауза в миллисекундах
+//РћР±С‰РёРµ ------------------------------------------------------------------------
+//РџР°СѓР·Р° РІ РјРёР»Р»РёСЃРµРєСѓРЅРґР°С…
 procedure acadPause(const AMsecs: Cardinal = 1500);
-//Функции перевода величин AutoCAD ---------------------------------------------
-//Толщина линии
+//Р¤СѓРЅРєС†РёРё РїРµСЂРµРІРѕРґР° РІРµР»РёС‡РёРЅ AutoCAD ---------------------------------------------
+//РўРѕР»С‰РёРЅР° Р»РёРЅРёРё
 function acadLineSizeTo(const ALineSize: Cardinal; const ALayerLineSize, ABlockLineSize: Double): Double;
-//Тип линии
+//РўРёРї Р»РёРЅРёРё
 function acadLineTypeTo(const ALineType: String; const ALayerLineType, ABlockLineType: TacadPenStyle): TacadPenStyle;
-//Наименование шрифта
+//РќР°РёРјРµРЅРѕРІР°РЅРёРµ С€СЂРёС„С‚Р°
 function acadFontNameTo(const AFontName: String): TacadFontName ;
-//Тип заливки
+//РўРёРї Р·Р°Р»РёРІРєРё
 function acadBrushStyleTo(const ABrushStyle: String): TacadBrushStyle ;
 
 implementation
 uses Windows, Math, ComObj, Forms, Variants;
 
-//Цвет AutoCAD -----------------------------------------------------------------
+//Р¦РІРµС‚ AutoCAD -----------------------------------------------------------------
 function acadColor(const AR,AG,AB: Byte): RacadColor;
 begin
   Result.R := AR;
   Result.G := AG;
   Result.B := AB;
 end;{acadColor}
-//Перо AutoCAD -----------------------------------------------------------------
+//РџРµСЂРѕ AutoCAD -----------------------------------------------------------------
 function acadPen(const AColor: RacadColor; const AWidth: Double; const AStyle: TacadPenStyle): RacadPen;
 begin
   Result.Color := AColor;
   Result.Width := AWidth;
   Result.Style := AStyle;
 end;{acadPen}
-//Заливка AutoCAD --------------------------------------------------------------
+//Р—Р°Р»РёРІРєР° AutoCAD --------------------------------------------------------------
 function acadBrush(const AColor: RacadColor; const AStyle: TacadBrushStyle): RacadBrush;
 begin
   Result.Color := AColor;
   Result.Style := AStyle;
 end;{acadBrush}
-//Шрифт AutoCAD ----------------------------------------------------------------
+//РЁСЂРёС„С‚ AutoCAD ----------------------------------------------------------------
 function acadFont(const AColor: RacadColor; const ASize: Double; const AStyle: TacadFontStyles; const AName: TacadFontName): RacadFont;
 begin
   Result.Color := AColor;
@@ -763,7 +763,7 @@ begin
   Result.Style := AStyle;
   Result.Name  := AName;
 end;{acadFont}
-//Координата AutoCAD -----------------------------------------------------------
+//РљРѕРѕСЂРґРёРЅР°С‚Р° AutoCAD -----------------------------------------------------------
 function acadCoord3D(): TacadCoord3D;
 begin
   Result := acadCoord3D(0.0,0.0,0.0);
@@ -774,7 +774,7 @@ begin
   Result[1] := AY;
   Result[2] := AZ;
 end;{acadCoord3D}
-//Контур
+//РљРѕРЅС‚СѓСЂ
 function acadBound(): RacadBound;
 begin
   Result := acadBound(acadCoord3D(), acadCoord3D());
@@ -790,14 +790,14 @@ begin
                            0.5*(ABound.Min[1]+ABound.Max[1]),
                            0.5*(ABound.Min[2]+ABound.Max[2]));
 end;{acadCenter}
-//Перевод мировых координат в экранные
+//РџРµСЂРµРІРѕРґ РјРёСЂРѕРІС‹С… РєРѕРѕСЂРґРёРЅР°С‚ РІ СЌРєСЂР°РЅРЅС‹Рµ
 function acadCoordTo(const AX,AY: Double; const ACanvasBound: TRect; const ACubeBound: RacadBound): TPoint;
 begin
   Result.X := Round(ACanvasBound.Left+(ACanvasBound.Right-ACanvasBound.Left)*(AX-ACubeBound.Min[0])/(ACubeBound.Max[0]-ACubeBound.Min[0]));
   Result.Y := Round(ACanvasBound.Top+(ACanvasBound.Bottom-ACanvasBound.Top)*(1-(AY-ACubeBound.Min[1])/(ACubeBound.Max[1]-ACubeBound.Min[1])));
 end;{acadCoordTo}
-//Общие ------------------------------------------------------------------------
-//Пауза в миллисекундах
+//РћР±С‰РёРµ ------------------------------------------------------------------------
+//РџР°СѓР·Р° РІ РјРёР»Р»РёСЃРµРєСѓРЅРґР°С…
 procedure acadPause(const AMsecs: Cardinal = 1500);
 var AStart: Cardinal;
 begin
@@ -805,8 +805,8 @@ begin
   while not GetTickCount - AStart < AMsecs do
     Application.ProcessMessages();
 end;{acadPause}
-//Функции перевода величин AutoCAD ---------------------------------------------
-//Толщина линии
+//Р¤СѓРЅРєС†РёРё РїРµСЂРµРІРѕРґР° РІРµР»РёС‡РёРЅ AutoCAD ---------------------------------------------
+//РўРѕР»С‰РёРЅР° Р»РёРЅРёРё
 function acadLineSizeTo(const ALineSize: Cardinal; const ALayerLineSize, ABlockLineSize: Double): Double;
 begin
   case ALineSize of
@@ -840,7 +840,7 @@ begin
   else Result := 0.0;
   end;{case}
 end;{acadLineSizeTo}
-//Тип линии
+//РўРёРї Р»РёРЅРёРё
 function acadLineTypeTo(const ALineType: String; const ALayerLineType, ABlockLineType: TacadPenStyle): TacadPenStyle;
 begin
   if ALineType = 'ByLayer' then Result := ALayerLineType else
@@ -877,34 +877,34 @@ begin
   if ALineType = 'JIS_09_29'  then Result := apsDash else
   if ALineType = 'JIS_09_50'  then Result := apsDash else
 
-  if ALineType = 'линия_сгиба'       then Result := apsDashDotDot else
-  if ALineType = 'линия_сгиба2'      then Result := apsDashDotDot else
-  if ALineType = 'линия_сгибаX2'     then Result := apsDashDotDot else
-  if ALineType = 'невидимая'         then Result := apsDash else
-  if ALineType = 'невидимая2'        then Result := apsDash else
-  if ALineType = 'невидимаяX2'       then Result := apsDash else
-  if ALineType = 'осевая'            then Result := apsDash else
-  if ALineType = 'осевая2'           then Result := apsDash else
-  if ALineType = 'осеваяX2'          then Result := apsDash else
-  if ALineType = 'пунктирная'        then Result := apsDot else
-  if ALineType = 'пунктирная2'       then Result := apsDot else
-  if ALineType = 'пунктирнаяX2'      then Result := apsDot else
-  if ALineType = 'рант'              then Result := apsDashDot else
-  if ALineType = 'рант2'             then Result := apsDashDot else
-  if ALineType = 'рантX2'            then Result := apsDashDot else
-  if ALineType = 'фантом'            then Result := apsDash else
-  if ALineType = 'фантом2'           then Result := apsDash else
-  if ALineType = 'фантомX2'          then Result := apsDash else
-  if ALineType = 'штриховая'         then Result := apsDash else
-  if ALineType = 'штриховая2'        then Result := apsDash else
-  if ALineType = 'штриховаяX2'       then Result := apsDash else
-  if ALineType = 'штрихпунктирная'   then Result := apsDashDot else
-  if ALineType = 'штрихпунктирная2'  then Result := apsDashDot else
-  if ALineType = 'штрихпунктирнаяX2' then Result := apsDashDot
+  if ALineType = 'Р»РёРЅРёСЏ_СЃРіРёР±Р°'       then Result := apsDashDotDot else
+  if ALineType = 'Р»РёРЅРёСЏ_СЃРіРёР±Р°2'      then Result := apsDashDotDot else
+  if ALineType = 'Р»РёРЅРёСЏ_СЃРіРёР±Р°X2'     then Result := apsDashDotDot else
+  if ALineType = 'РЅРµРІРёРґРёРјР°СЏ'         then Result := apsDash else
+  if ALineType = 'РЅРµРІРёРґРёРјР°СЏ2'        then Result := apsDash else
+  if ALineType = 'РЅРµРІРёРґРёРјР°СЏX2'       then Result := apsDash else
+  if ALineType = 'РѕСЃРµРІР°СЏ'            then Result := apsDash else
+  if ALineType = 'РѕСЃРµРІР°СЏ2'           then Result := apsDash else
+  if ALineType = 'РѕСЃРµРІР°СЏX2'          then Result := apsDash else
+  if ALineType = 'РїСѓРЅРєС‚РёСЂРЅР°СЏ'        then Result := apsDot else
+  if ALineType = 'РїСѓРЅРєС‚РёСЂРЅР°СЏ2'       then Result := apsDot else
+  if ALineType = 'РїСѓРЅРєС‚РёСЂРЅР°СЏX2'      then Result := apsDot else
+  if ALineType = 'СЂР°РЅС‚'              then Result := apsDashDot else
+  if ALineType = 'СЂР°РЅС‚2'             then Result := apsDashDot else
+  if ALineType = 'СЂР°РЅС‚X2'            then Result := apsDashDot else
+  if ALineType = 'С„Р°РЅС‚РѕРј'            then Result := apsDash else
+  if ALineType = 'С„Р°РЅС‚РѕРј2'           then Result := apsDash else
+  if ALineType = 'С„Р°РЅС‚РѕРјX2'          then Result := apsDash else
+  if ALineType = 'С€С‚СЂРёС…РѕРІР°СЏ'         then Result := apsDash else
+  if ALineType = 'С€С‚СЂРёС…РѕРІР°СЏ2'        then Result := apsDash else
+  if ALineType = 'С€С‚СЂРёС…РѕРІР°СЏX2'       then Result := apsDash else
+  if ALineType = 'С€С‚СЂРёС…РїСѓРЅРєС‚РёСЂРЅР°СЏ'   then Result := apsDashDot else
+  if ALineType = 'С€С‚СЂРёС…РїСѓРЅРєС‚РёСЂРЅР°СЏ2'  then Result := apsDashDot else
+  if ALineType = 'С€С‚СЂРёС…РїСѓРЅРєС‚РёСЂРЅР°СЏX2' then Result := apsDashDot
 
   else Result := apsClear;
 end;{acadLineTypeTo}
-//Наименование шрифта
+//РќР°РёРјРµРЅРѕРІР°РЅРёРµ С€СЂРёС„С‚Р°
 function acadFontNameTo(const AFontName: String): TacadFontName;
 begin
   if AFontName = 'arial.ttf'      then Result := afnArial else
@@ -918,7 +918,7 @@ begin
   //...
   else Result := afnArial;
 end;{acadFontNameTo}
-//Тип заливки
+//РўРёРї Р·Р°Р»РёРІРєРё
 function acadBrushStyleTo(const ABrushStyle: String): TacadBrushStyle;
 begin
   if ABrushStyle = 'SOLID' then Result := absSolid else
@@ -1012,22 +1012,22 @@ begin
   else Result := absClear;
 end;{acadBrushStyleTo}
 
-//Исключительные ситуации ------------------------------------------------------
-//Неверное значение индекса
+//РСЃРєР»СЋС‡РёС‚РµР»СЊРЅС‹Рµ СЃРёС‚СѓР°С†РёРё ------------------------------------------------------
+//РќРµРІРµСЂРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ РёРЅРґРµРєСЃР°
 constructor TacadException.InvalidIndex(const AIndex,ACount: Integer);
 begin
   CreateResFmt(@EacadInvalidIndex,[AIndex,ACount-1]);
 end;{InvalidIndex}
 
-//Глобальный объект AutoCAD ----------------------------------------------------
-//Конструктор/деструктор
+//Р“Р»РѕР±Р°Р»СЊРЅС‹Р№ РѕР±СЉРµРєС‚ AutoCAD ----------------------------------------------------
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadObject.Create();
 begin
   inherited;
 end;{Create}
 
-//Графический объект AutoCAD ---------------------------------------------------
-//Конструктор/деструктор
+//Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚ AutoCAD ---------------------------------------------------
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadGraphObject.Create();
 begin
   inherited;
@@ -1035,24 +1035,24 @@ begin
   FCenter     := acadCoord3D();
   FVisible    := True;
 end;{Create}
-//Прорисовка на канвасе
+//РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
 procedure TacadGraphObject.DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound);
 begin
 end;{DrawToCanvas}
-//Определение контура и центра
+//РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР° Рё С†РµРЅС‚СЂР°
 procedure TacadGraphObject._DefineBound();
 begin
   FCenter := acadCenter(FBound);
 end;{_DefineBound}
 
-//Объект слоя AutoCAD ----------------------------------------------------------
-//Конструктор/деструктор
+//РћР±СЉРµРєС‚ СЃР»РѕСЏ AutoCAD ----------------------------------------------------------
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadLayerObject.Create();
 begin
   inherited;
   FEntityType := 0;
 end;{Create}
-//Наименование класса объекта AutoCAD
+//РќР°РёРјРµРЅРѕРІР°РЅРёРµ РєР»Р°СЃСЃР° РѕР±СЉРµРєС‚Р° AutoCAD
 function TacadLayerObject.GetEntityName(): String;
 begin
   case EntityType of
@@ -1071,20 +1071,20 @@ begin
     else Result := '';
   end;{case}
 end;{GetEntityName}
-//Обработка свойств объекта AutoCAD
+//РћР±СЂР°Р±РѕС‚РєР° СЃРІРѕР№СЃС‚РІ РѕР±СЉРµРєС‚Р° AutoCAD
 procedure TacadLayerObject.ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock);
 begin
 end;{ExtractAcadEntity}
 
-//Объект AutoCAD "Точка" -------------------------------------------------------
-//Конструктор/деструктор
+//РћР±СЉРµРєС‚ AutoCAD "РўРѕС‡РєР°" -------------------------------------------------------
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadPoint.Create();
 begin
   inherited;
   FColor := acadColor(255,255,255);
   FSize  := 1.0;
 end;{Create}
-//Извлечение точки AutoCAD
+//РР·РІР»РµС‡РµРЅРёРµ С‚РѕС‡РєРё AutoCAD
 procedure TacadPoint.ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock);
 var
   AAcadPoint    : IAcadPoint;
@@ -1100,9 +1100,9 @@ begin
     ABlockPenWidth := ABlock.DefaultPen.Width;
     ABlockCenter   := acadCoord3D(ABlock.Center[0], ABlock.Center[1], ABlock.Center[2]);
   end;{if}
-  //Общие
+  //РћР±С‰РёРµ
   FEntityType := AAcadPoint.EntityType;
-  //Графический объект
+  //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
 
   FSize       := acadLineSizeTo(AAcadPoint.Lineweight, ALayer.DefaultPen.Width, ABlockPenWidth);
   FVisible    := AAcadPoint.Visible = True;
@@ -1112,7 +1112,7 @@ begin
   //Bound
   _DefineBound();
 end;{ExtractAcadEntity}
-//Прорисовка на канвасе
+//РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
 procedure TacadPoint.DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound);
 var p0,p1: TPoint;
 begin
@@ -1125,7 +1125,7 @@ begin
     ACanvas.Rectangle(p0.X, p0.Y, p1.X, p1.Y);
   end;{if}
 end;{DrawToCanvas}
-//Определение контура
+//РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР°
 procedure TacadPoint._DefineBound();
 var AHalfSize: Double;
 begin
@@ -1134,7 +1134,7 @@ begin
                          acadCoord3D(Center[0]+AHalfSize, Center[1]+AHalfSize, Center[2]+AHalfSize));
 end;{_DefineBound}
 
-//Пользовательский объект CustomPolyline ---------------------------------------
+//РџРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёР№ РѕР±СЉРµРєС‚ CustomPolyline ---------------------------------------
 function TacadCustomPolyline.GetCoord(const AIndex: Integer): TacadCoord3D;
 begin
   if (AIndex < 0) or (AIndex >= CoordsCount)
@@ -1145,7 +1145,7 @@ function TacadCustomPolyline._GetCoord(const AIndex: Integer): TacadCoord3D;
 begin
   Result := FCoords[AIndex];
 end;{_GetCoord}
-//Конструктор/деструктор
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadCustomPolyline.Create();
 begin
   inherited;
@@ -1160,7 +1160,7 @@ begin
   FCoords      := nil;
   inherited;
 end;{Destroy}
-//Прорисовка на канвасе
+//РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
 procedure TacadCustomPolyline._DrawPlineToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound; const AClosed: Boolean = False);
 var
   I    : Integer;
@@ -1182,13 +1182,13 @@ begin
     if AClosed then ACanvas.LineTo(p0.X, p0.Y);
   end;{if}
 end;{_DrawPlineToCanvas}
-//Прорисовка на канвасе
+//РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
 procedure TacadCustomPolyline.DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound);
 begin
   if Visible
   then _DrawPlineToCanvas(ACanvas, ACanvasBound, ACubeBound, False);
 end;{DrawPlineToCanvas}
-//Определение контура и центра
+//РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР° Рё С†РµРЅС‚СЂР°
 procedure TacadCustomPolyline._DefineBound();
 var I, K: Integer;
 begin
@@ -1214,12 +1214,12 @@ begin
       FCenter[K] := (FBound.Min[K] + FBound.Max[K])*0.5;
   end;{if}
 end;{_DefineBound}
-//Расчет точек контура
+//Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР°
 procedure TacadCustomPolyline._DefineAdditional();
 begin
 end;{_DefineAdditional}
 
-//Блок AutoCAD -----------------------------------------------------------------
+//Р‘Р»РѕРє AutoCAD -----------------------------------------------------------------
 function TacadBlock.GetItem(const AIndex: Integer): TacadLayerObject;
 begin
   if (AIndex < 0) or (AIndex >= Count)
@@ -1230,7 +1230,7 @@ function TacadBlock._GetItem(const AIndex: Integer): TacadLayerObject;
 begin
   Result := TacadLayerObject(FItems.List^[AIndex]);
 end;{_GetItem}
-//Прорисовка на канвасе
+//РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
 procedure TacadBlock.DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound);
 var I: Integer;
 begin
@@ -1238,7 +1238,7 @@ begin
   for I := 0 to Count-1 do
     _Items[I].DrawToCanvas(ACanvas, ACanvasBound, ACubeBound);
 end;{DrawToCanvas}
-//Очистка
+//РћС‡РёСЃС‚РєР°
 procedure TacadBlock.Clear();
 var I: Integer;
 begin
@@ -1251,7 +1251,7 @@ begin
     _DefineBound();
   end;{if}
 end;{Clear}
-//Добавление объекта
+//Р”РѕР±Р°РІР»РµРЅРёРµ РѕР±СЉРµРєС‚Р°
 procedure TacadBlock.Add(const AObject: TacadLayerObject);
 begin
   if Assigned(AObject) then
@@ -1264,7 +1264,7 @@ begin
     _DefineBound();
   end;{if}
 end;{Add}
-//Определение контура
+//РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР°
 procedure TacadBlock._DefineBound();
 var I, K: Integer;
 begin
@@ -1283,12 +1283,12 @@ begin
     end;{for}
   end;{if}
 end;{_DefineBound}
-//Обработка блока AutoCAD
+//РћР±СЂР°Р±РѕС‚РєР° Р±Р»РѕРєР° AutoCAD
 procedure TacadBlock.ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock);
 var AAcadBlockReference: IAcadBlockReference;
 begin
   AAcadBlockReference := AAcadObj as IAcadBlockReference;
-  //Общие
+  //РћР±С‰РёРµ
   FEntityType         := AAcadBlockReference.EntityType;
   FCenter             := acadCoord3D(AAcadBlockReference.InsertionPoint[0], AAcadBlockReference.InsertionPoint[1], AAcadBlockReference.InsertionPoint[2]);
   FVisible            := AAcadBlockReference.Visible = True;
@@ -1298,26 +1298,26 @@ begin
                                     acadLineTypeTo(AAcadBlockReference.Linetype, ALayer.DefaultPen.Style, apsClear));
   FName               := AAcadBlockReference.Name;
 end;{ExtractAcadEntity}
-//Обработка объектов блока AutoCAD
+//РћР±СЂР°Р±РѕС‚РєР° РѕР±СЉРµРєС‚РѕРІ Р±Р»РѕРєР° AutoCAD
 procedure TacadBlock.ExtractAcadEntityDn(const ALayer: TacadLayer; const AAcadBlocks: IAcadBlocks);
 var
-  AAcadBlock   : IAcadBlock;           //Текущий блок AutoCAD
-  AAcadBlockObj: IAcadEntity;          //Объект блока AutoCAD
-  ABlockName   : String;               //Имя блока AutoCAD
-  ABlockObject : TacadLayerObject;     //Пользовательский объект блока
-  AClassRef    : TacadLayerObjectRef;  //Ссылка на тип класса TacadLayerObject
+  AAcadBlock   : IAcadBlock;           //РўРµРєСѓС‰РёР№ Р±Р»РѕРє AutoCAD
+  AAcadBlockObj: IAcadEntity;          //РћР±СЉРµРєС‚ Р±Р»РѕРєР° AutoCAD
+  ABlockName   : String;               //РРјСЏ Р±Р»РѕРєР° AutoCAD
+  ABlockObject : TacadLayerObject;     //РџРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёР№ РѕР±СЉРµРєС‚ Р±Р»РѕРєР°
+  AClassRef    : TacadLayerObjectRef;  //РЎСЃС‹Р»РєР° РЅР° С‚РёРї РєР»Р°СЃСЃР° TacadLayerObject
   //
   I, K         : Integer;
 begin
-  //Пробегаемся по блокам текущего документа
+  //РџСЂРѕР±РµРіР°РµРјСЃСЏ РїРѕ Р±Р»РѕРєР°Рј С‚РµРєСѓС‰РµРіРѕ РґРѕРєСѓРјРµРЅС‚Р°
   for I := 0 to AAcadBlocks.Count-1 do
   begin
     ABlockName := AAcadBlocks.Item(I).Name;
-    //Проверка на пользовательские блоки
+    //РџСЂРѕРІРµСЂРєР° РЅР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёРµ Р±Р»РѕРєРё
     if Name = ABlockName then
     begin
       AAcadBlock := AAcadBlocks.Item(I);
-      //Объекты текущего блока
+      //РћР±СЉРµРєС‚С‹ С‚РµРєСѓС‰РµРіРѕ Р±Р»РѕРєР°
       for K := 0 to AAcadBlock.Count-1 do
       begin
         AAcadBlockObj := AAcadBlock.Item(K);
@@ -1340,7 +1340,7 @@ begin
         begin
           ABlockObject := AClassRef.Create();
           ABlockObject.ExtractAcadEntity(AAcadBlockObj, ALayer, Self);
-          //Обработка вложенного блока рекурсией
+          //РћР±СЂР°Р±РѕС‚РєР° РІР»РѕР¶РµРЅРЅРѕРіРѕ Р±Р»РѕРєР° СЂРµРєСѓСЂСЃРёРµР№
           if ABlockObject is TacadBlock
           then TacadBlock(ABlockObject).ExtractAcadEntityDn(ALayer, AAcadBlocks);
           Add(ABlockObject);
@@ -1350,7 +1350,7 @@ begin
     end;{if}
   end;{for}
 end;{ExtractAcadEntityDn}
-//Конструктор/деструктор
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadBlock.Create();
 begin
   inherited;
@@ -1365,7 +1365,7 @@ begin
   inherited;
 end;{Destroy}
 
-//Объект AutoCAD "Линия" -------------------------------------------------------
+//РћР±СЉРµРєС‚ AutoCAD "Р›РёРЅРёСЏ" -------------------------------------------------------
 function TacadLine.GetStartPoint(): TacadCoord3D;
 begin
   Result := Coords[0];
@@ -1374,7 +1374,7 @@ function TacadLine.GetEndPoint(): TacadCoord3D;
 begin
   Result := Coords[1];
 end;{GetEndPoint}
-//Извеление линии AutoCAD
+//РР·РІРµР»РµРЅРёРµ Р»РёРЅРёРё AutoCAD
 procedure TacadLine.ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock);
 var
   AAcadLine     : IAcadLine;
@@ -1394,9 +1394,9 @@ begin
     ABlockPenStyle := ABlock.DefaultPen.Style;
   end;{if}
   AAcadLine     := AAcadObj as IAcadLine;
-  //Общие
+  //РћР±С‰РёРµ
   FEntityType   := AAcadLine.EntityType;
-  //Графический объект
+  //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
   FVisible      := AAcadLine.Visible = True;
   //CustomPolyline
   FPen          := acadPen(acadColor(AAcadLine.TrueColor.Red, AAcadLine.TrueColor.Green, AAcadLine.TrueColor.Blue), acadLineSizeTo(AAcadLine.Lineweight, ALayer.DefaultPen.Width, ABlockPenWidth),
@@ -1410,14 +1410,14 @@ begin
   _DefineBound();
 end;{ExtractAcadEntity}
 
-//Объект AutoCAD "Полилиния" ---------------------------------------------------
-//Конструктор/деструктор
+//РћР±СЉРµРєС‚ AutoCAD "РџРѕР»РёР»РёРЅРёСЏ" ---------------------------------------------------
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadPolyline.Create();
 begin
   inherited;
   FClosed := False;
 end;{Create}
-//Обработка полилинии AutoCAD
+//РћР±СЂР°Р±РѕС‚РєР° РїРѕР»РёР»РёРЅРёРё AutoCAD
 procedure TacadPolyline.ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock);
 var
   AAcadPolyline : IAcadLWPolyline;
@@ -1438,9 +1438,9 @@ begin
     ABlockPenStyle := ABlock.DefaultPen.Style;
   end;{if}
   AAcadPolyline := AAcadObj as IAcadLWPolyline;
-  //Общие
+  //РћР±С‰РёРµ
   FEntityType   := AAcadPolyline.EntityType;
-  //Графический объект
+  //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
   FVisible      := AAcadPolyline.Visible = True;
   //CustomPolyline
   FPen          := acadPen(acadColor(AAcadPolyline.TrueColor.Red, AAcadPolyline.TrueColor.Green, AAcadPolyline.TrueColor.Blue), acadLineSizeTo(AAcadPolyline.Lineweight, ALayer.DefaultPen.Width, ABlockPenWidth),
@@ -1458,13 +1458,13 @@ begin
   //Bound & Perimeter
   _DefineBound();
 end;{ExtractAcadEntity}
-//Прорисовка на канвасе
+//РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
 procedure TacadPolyline.DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound);
 begin
   if Visible
   then _DrawPlineToCanvas(ACanvas, ACanvasBound, ACubeBound, Closed);
 end;{DrawToCanvas}
-//Определение контура и центра
+//РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР° Рё С†РµРЅС‚СЂР°
 procedure TacadPolyline._DefineBound();
 var I: Integer;
 begin
@@ -1480,14 +1480,14 @@ begin
   end;{if}
 end;{_DefineBound}
 
-//Объект AutoCAD "3D Полилиния" ------------------------------------------------
-//Конструктор/деструктор
+//РћР±СЉРµРєС‚ AutoCAD "3D РџРѕР»РёР»РёРЅРёСЏ" ------------------------------------------------
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor Tacad3DPolyline.Create();
 begin
   inherited;
   FClosed := False;
 end;{Create}
-//Обработка полилинии AutoCAD
+//РћР±СЂР°Р±РѕС‚РєР° РїРѕР»РёР»РёРЅРёРё AutoCAD
 procedure Tacad3DPolyline.ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock);
 var
   AAcad3DPolyline: IAcad3DPolyline;
@@ -1507,9 +1507,9 @@ begin
     ABlockCenter   := acadCoord3D(ABlock.Center[0], ABlock.Center[1], ABlock.Center[2]);
     ABlockPenStyle := ABlock.DefaultPen.Style;
   end;{if}
-  //Общие
+  //РћР±С‰РёРµ
   FEntityType     := AAcad3DPolyline.EntityType;
-  //Графический объект
+  //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
   FVisible        := AAcad3DPolyline.Visible = True;
   //CustomPolyline
   FPen := acadPen(acadColor(AAcad3DPolyline.TrueColor.Red, AAcad3DPolyline.TrueColor.Green, AAcad3DPolyline.TrueColor.Blue), acadLineSizeTo(AAcad3DPolyline.Lineweight, ALayer.DefaultPen.Width, ABlockPenWidth),
@@ -1528,13 +1528,13 @@ begin
   //Bound & Perimeter
   _DefineBound();
 end;{ExtractAcadEntity}
-//Прорисовка на канвасе
+//РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
 procedure Tacad3DPolyline.DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound);
 begin
   if Visible
   then _DrawPlineToCanvas(ACanvas, ACanvasBound, ACubeBound, Closed);
 end;{DrawToCanvas}
-//Определение контура и центра
+//РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР° Рё С†РµРЅС‚СЂР°
 procedure Tacad3DPolyline._DefineBound();
 var I: Integer;
 begin
@@ -1550,8 +1550,8 @@ begin
   end;{if}
 end;{_DefineBound}
 
-//Объект AutoCAD "Дуга" --------------------------------------------------------
-//Конструктор/деструктор
+//РћР±СЉРµРєС‚ AutoCAD "Р”СѓРіР°" --------------------------------------------------------
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadArc.Create();
 begin
   inherited;
@@ -1561,7 +1561,7 @@ begin
   FStartAngle := 0.0;
   FEndAngle   := 0.0;
 end;{Create}
-//Обработка дуги AutoCAD
+//РћР±СЂР°Р±РѕС‚РєР° РґСѓРіРё AutoCAD
 procedure TacadArc.ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock);
 var
   AAcadArc      : IAcadArc;
@@ -1580,9 +1580,9 @@ begin
     ABlockCenter   := acadCoord3D(ABlock.Center[0], ABlock.Center[1], ABlock.Center[2]);
     ABlockPenStyle := ABlock.DefaultPen.Style;
   end;{if}
-  //Общие
+  //РћР±С‰РёРµ
   FEntityType  := AAcadArc.EntityType;
-  //Графический объект
+  //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
   FCenter      := acadCoord3D(AAcadArc.Center[0]+ABlockCenter[0], AAcadArc.Center[1]+ABlockCenter[1], AAcadArc.Center[2]+ABlockCenter[2]);
   FVisible     := AAcadArc.Visible = True;
   //CustomPolyline
@@ -1598,7 +1598,7 @@ begin
   //Bound
   _DefineBound();
 end;{ExtractAcadEntity}
-//Расчет точек контура
+//Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР°
 procedure TacadArc._DefineAdditional();
 var I, K, ACount: Integer;
 const
@@ -1620,7 +1620,7 @@ begin
   FCoordsCount := ACount;
 end;{_DefineAdditional}
 
-//Объект AutoCAD "Сплайн" ------------------------------------------------------
+//РћР±СЉРµРєС‚ AutoCAD "РЎРїР»Р°Р№РЅ" ------------------------------------------------------
 function TacadSpline.GetNode(const AIndex: Integer): TacadCoord3D;
 begin
   if (AIndex < 0) or (AIndex >= NodesCount)
@@ -1631,7 +1631,7 @@ function TacadSpline._GetNode(const AIndex: Integer): TacadCoord3D;
 begin
   Result := FNodes[AIndex];
 end;{_GetNode}
-//Конструктор/деструктор
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadSpline.Create();
 begin
   inherited;
@@ -1646,7 +1646,7 @@ begin
   FNodes      := nil;
   inherited;
 end;{Destroy}
-//Обработка сплайна AutoCAD
+//РћР±СЂР°Р±РѕС‚РєР° СЃРїР»Р°Р№РЅР° AutoCAD
 procedure TacadSpline.ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock);
 var
   AAcadSpline   : IAcadSpline;
@@ -1666,9 +1666,9 @@ begin
     ABlockCenter   := acadCoord3D(ABlock.Center[0], ABlock.Center[1], ABlock.Center[2]);
     ABlockPenStyle := ABlock.DefaultPen.Style;
   end;{if}
-  //Общие
+  //РћР±С‰РёРµ
   FEntityType := AAcadSpline.EntityType;
-  //Графический объект
+  //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
   FVisible    := AAcadSpline.Visible = True;
   //CustomPolyline
   FPen        := acadPen(acadColor(AAcadSpline.TrueColor.Red, AAcadSpline.TrueColor.Green, AAcadSpline.TrueColor.Blue), acadLineSizeTo(AAcadSpline.Lineweight, ALayer.DefaultPen.Width, ABlockPenWidth),
@@ -1690,7 +1690,7 @@ begin
   //Bound
   _DefineBound();
 end;{ExtractAcadEntity}
-//Расчет точек контура
+//Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР°
 procedure TacadSpline._DefineAdditional();
 var I, ACount: Integer;
 begin
@@ -1701,8 +1701,8 @@ begin
   FCoordsCount := ACount;
 end;{_DefineAdditional}
 
-//Пользовательский объект CustomPolygon ----------------------------------------
-//Конструктор/деструктор
+//РџРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёР№ РѕР±СЉРµРєС‚ CustomPolygon ----------------------------------------
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadCustomPolygon.Create();
 begin
   inherited;
@@ -1717,7 +1717,7 @@ begin
   FTriangles      := nil;
   inherited;
 end;{Destroy}
-//Методы диспетчеризации свойств
+//РњРµС‚РѕРґС‹ РґРёСЃРїРµС‚С‡РµСЂРёР·Р°С†РёРё СЃРІРѕР№СЃС‚РІ
 function TacadCustomPolygon.GetTriangle(const AIndex: Integer): RacadTriangle;
 begin
   if (AIndex < 0) or (AIndex >= TrianglesCount)
@@ -1728,7 +1728,7 @@ function TacadCustomPolygon._GetTriangle(const AIndex: Integer): RacadTriangle;
 begin
   Result := FTriangles[AIndex];
 end;{_GetTriangle}
-//Прорисовка на канвасе
+//РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
 procedure TacadCustomPolygon._DrawPgonToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound);
 var
   p0,p1,p2: TPoint;
@@ -1736,7 +1736,7 @@ var
 begin
   if (TrianglesCount > 0) and (Brush.Style <> absClear) then
   begin
-    //Прорисовка треугольников
+    //РџСЂРѕСЂРёСЃРѕРІРєР° С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
     ACanvas.Brush.Color := RGB(Pen.Color.R,Pen.Color.G,Pen.Color.B);
     ACanvas.Pen.Color   := ACanvas.Brush.Color;
     for I := 0 to TrianglesCount-1 do
@@ -1756,12 +1756,12 @@ begin
     _DrawPlineToCanvas(ACanvas, ACanvasBound, ACubeBound, True);
   end;{if}
 end;{DrawToCanvas}
-//Определение контура и центра
+//РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР° Рё С†РµРЅС‚СЂР°
 procedure TacadCustomPolygon._DefineBound();
 var I: Integer;
 begin
   inherited;
-  //Расчет суммы площадей треугольников
+  //Р Р°СЃС‡РµС‚ СЃСѓРјРјС‹ РїР»РѕС‰Р°РґРµР№ С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
   FArea := 0.0;
   if TrianglesCount > 0 then
   begin
@@ -1769,15 +1769,15 @@ begin
       FArea := Area + ( (_Triangles[I].p0[0]-_Triangles[I].p2[0])*(_Triangles[I].p1[1]-_Triangles[I].p2[1])-(_Triangles[I].p1[0]-_Triangles[I].p2[0])*(_Triangles[I].p0[1]-_Triangles[I].p2[1]) ) * 0.5;
   end;{if}
 end;{_DefineBound}
-//Расчет точек контура и треугольников
+//Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР° Рё С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
 procedure TacadCustomPolygon._DefineAdditional();
 begin
   FTrianglesCount := 0;
   FTriangles      := nil;
 end;{_DefineAdditional}
 
-//Объект AutoCAD "Полигон" -----------------------------------------------------
-//Обработка полигона AutoCAD
+//РћР±СЉРµРєС‚ AutoCAD "РџРѕР»РёРіРѕРЅ" -----------------------------------------------------
+//РћР±СЂР°Р±РѕС‚РєР° РїРѕР»РёРіРѕРЅР° AutoCAD
 procedure TacadPolygon.ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock);
 var
   AAcadHatch    : IAcadHatch;
@@ -1796,9 +1796,9 @@ begin
     ABlockCenter   := acadCoord3D(ABlock.Center[0], ABlock.Center[1], ABlock.Center[2]);
     ABlockPenStyle := ABlock.DefaultPen.Style;
   end;{if}
-  //Общие
+  //РћР±С‰РёРµ
   FEntityType  := AAcadHatch.EntityType;
-  //Графический объект
+  //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
   FCenter      := acadCoord3D(AAcadHatch.Origin[0]+ABlockCenter[0], AAcadHatch.Origin[1]+ABlockCenter[1], 0.0);
   FVisible     := AAcadHatch.Visible = True;
   //CustomPolyline
@@ -1811,19 +1811,19 @@ begin
   //Bound
   _DefineBound();
 end;{ExtractAcadEntity}
-//Расчет точек контура и треугольников
+//Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР° Рё С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
 procedure TacadPolygon._DefineAdditional();
 begin
 end;{_DefineAdditional}
 
-//Объект AutoCAD "Круг" --------------------------------------------------------
-//Конструктор/деструктор
+//РћР±СЉРµРєС‚ AutoCAD "РљСЂСѓРі" --------------------------------------------------------
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadCircle.Create();
 begin
   inherited;
   FRadius := 1.0;
 end;{Create}
-//Обработка круга AutoCAD
+//РћР±СЂР°Р±РѕС‚РєР° РєСЂСѓРіР° AutoCAD
 procedure TacadCircle.ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock);
 var
   AAcadCircle   : IAcadCircle;
@@ -1842,9 +1842,9 @@ begin
     ABlockCenter   := acadCoord3D(ABlock.Center[0], ABlock.Center[1], ABlock.Center[2]);
     ABlockPenStyle := ABlock.DefaultPen.Style;
   end;{if}
-  //Общие
+  //РћР±С‰РёРµ
   FEntityType  := AAcadCircle.EntityType;
-  //Графический объект
+  //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
   FCenter      := acadCoord3D(AAcadCircle.Center[0]+ABlockCenter[0], AAcadCircle.Center[1]+ABlockCenter[1], AAcadCircle.Center[2]+ABlockCenter[2]);
   FVisible     := AAcadCircle.Visible = True;
   //CustomPolyline
@@ -1858,7 +1858,7 @@ begin
   //Bound
   _DefineBound();
 end;{ExtractAcadEntity}
-//Расчет точек контура и треугольников
+//Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР° Рё С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
 procedure TacadCircle._DefineAdditional();
 var I, ACount: Integer;
 begin
@@ -1867,8 +1867,8 @@ begin
   for I := 0 to ACount-1 do
     FCoords[I] := acadCoord3D(Center[0]+Radius*Cos(I*10.0*PI/180.0), Center[1]+Radius*Sin(I*10.0*PI/180.0), 0.0);
   FCoordsCount := ACount;
-  //Расчет координат треугольников
-  //Количество треугольников
+  //Р Р°СЃС‡РµС‚ РєРѕРѕСЂРґРёРЅР°С‚ С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
+  //РљРѕР»РёС‡РµСЃС‚РІРѕ С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
   ACount := 36;
   SetLength(FTriangles, ACount);
   FTriangles[0].p0[0] := _Coords[ACount-1][0];
@@ -1889,8 +1889,8 @@ begin
   FTrianglesCount := ACount;
 end;{_DefineAdditional}
 
-//Объект AutoCAD "Эллипс" ------------------------------------------------------
-//Конструктор/деструктор
+//РћР±СЉРµРєС‚ AutoCAD "Р­Р»Р»РёРїСЃ" ------------------------------------------------------
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadEllipse.Create();
 begin
   inherited;
@@ -1898,7 +1898,7 @@ begin
   FMinorRadius := 0.0;
   FMajorAxis   := 0.0;
 end;{Create}
-//Обработка эллипса AutoCAD
+//РћР±СЂР°Р±РѕС‚РєР° СЌР»Р»РёРїСЃР° AutoCAD
 procedure TacadEllipse.ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock);
 var
   AAcadEllipse  : IAcadEllipse;
@@ -1917,9 +1917,9 @@ begin
     ABlockCenter   := acadCoord3D(ABlock.Center[0], ABlock.Center[1], ABlock.Center[2]);
     ABlockPenStyle := ABlock.DefaultPen.Style;
   end;{if}
-  //Общие
+  //РћР±С‰РёРµ
   FEntityType  := AAcadEllipse.EntityType;
-  //Графический объект
+  //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
   FCenter      := acadCoord3D(AAcadEllipse.Center[0]+ABlockCenter[0], AAcadEllipse.Center[1]+ABlockCenter[1], AAcadEllipse.Center[2]+ABlockCenter[2]);
   FBound       := acadBound(FCenter, FCenter);
   FVisible     := AAcadEllipse.Visible = True;
@@ -1937,13 +1937,13 @@ begin
   //Bound
   _DefineBound();
 end;{ExtractAcadEntity}
-//Расчет точек контура и треугольников
+//Р Р°СЃС‡РµС‚ С‚РѕС‡РµРє РєРѕРЅС‚СѓСЂР° Рё С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
 procedure TacadEllipse._DefineAdditional();
 var
   AMajorRadius, AMinorRadius: Double;
   I, ACount                 : Integer;
 begin
-  //Расчет координат контура
+  //Р Р°СЃС‡РµС‚ РєРѕРѕСЂРґРёРЅР°С‚ РєРѕРЅС‚СѓСЂР°
   AMajorRadius := MajorRadius;
   AMinorRadius := MinorRadius;
   ACount := 36;
@@ -1956,8 +1956,8 @@ begin
   for I := 0 to ACount-1 do
     FCoords[I] := acadCoord3D(Center[0]+AMajorRadius*Cos(I*10.0*PI/180.0), Center[1]+AMinorRadius*Sin(I*10.0*PI/180.0), 0.0);
   FCoordsCount := ACount;
-  //Расчет координат треугольников
-  //Количество треугольников
+  //Р Р°СЃС‡РµС‚ РєРѕРѕСЂРґРёРЅР°С‚ С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
+  //РљРѕР»РёС‡РµСЃС‚РІРѕ С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ
   ACount := 36;
   SetLength(FTriangles, ACount);
   FTriangles[0].p0[0] := _Coords[ACount-1][0];
@@ -1978,8 +1978,8 @@ begin
   FTrianglesCount := ACount;
 end;{_DefineAdditional}
 
-//Объект AutoCAD "Текст" -------------------------------------------------------
-//Конструктор/деструктор
+//РћР±СЉРµРєС‚ AutoCAD "РўРµРєСЃС‚" -------------------------------------------------------
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadText.Create();
 begin
   inherited;
@@ -1994,12 +1994,12 @@ begin
   FUpsideDown    := False;
   FBackward      := False;
 end;{Create}
-//Обработка текста AutoCAD
+//РћР±СЂР°Р±РѕС‚РєР° С‚РµРєСЃС‚Р° AutoCAD
 procedure TacadText.ExtractAcadEntity(const AAcadObj: IAcadEntity; const ALayer: TacadLayer; const ABlock: TacadBlock);
 begin
 
 end;{ExtractAcadEntity}
-//Прорисовка на канвасе
+//РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
 procedure TacadText.DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound);
 begin
   if Visible then
@@ -2011,11 +2011,11 @@ begin
     //ACanvas.Font.Pitch
     //ACanvas.Font.Height
 
-    //Прорисовка...
+    //РџСЂРѕСЂРёСЃРѕРІРєР°...
   end;{if}
 end;{DrawToCanvas}
 
-//Слой AutoCAD ---------------------------------------------------------------
+//РЎР»РѕР№ AutoCAD ---------------------------------------------------------------
 function TacadLayer.GetItem(const AIndex: Integer): TacadLayerObject;
 begin
   if (AIndex < 0) or (AIndex >= Count)
@@ -2026,7 +2026,7 @@ function TacadLayer._GetItem(const AIndex: Integer): TacadLayerObject;
 begin
   Result := TacadLayerObject(FItems.List^[AIndex]);
 end;{_GetItem}
-//Прорисовка на канвасе
+//РџСЂРѕСЂРёСЃРѕРІРєР° РЅР° РєР°РЅРІР°СЃРµ
 procedure TacadLayer.DrawToCanvas(const ACanvas: TCanvas; const ACanvasBound: TRect; const ACubeBound: RacadBound);
 var I: Integer;
 begin
@@ -2034,7 +2034,7 @@ begin
   for I := 0 to Count-1 do
     _Items[I].DrawToCanvas(ACanvas, ACanvasBound, ACubeBound);
 end;{DrawToCanvas}
-//Очистка
+//РћС‡РёСЃС‚РєР°
 procedure TacadLayer.Clear();
 var I: Integer;
 begin
@@ -2047,7 +2047,7 @@ begin
     _DefineBound();
   end;{if}
 end;{Clear}
-//Добавление объекта
+//Р”РѕР±Р°РІР»РµРЅРёРµ РѕР±СЉРµРєС‚Р°
 procedure TacadLayer.Add(const AObject: TacadLayerObject);
 begin
   if Assigned(AObject) then
@@ -2060,7 +2060,7 @@ begin
     _DefineBound();
   end;{if}
 end;{Add}
-//Определение контура
+//РћРїСЂРµРґРµР»РµРЅРёРµ РєРѕРЅС‚СѓСЂР°
 procedure TacadLayer._DefineBound();
 var I, K: Integer;
 begin
@@ -2084,7 +2084,7 @@ begin
       FCenter[K] := (FBound.Min[K] + FBound.Max[K])*0.5;
   end;{if}
 end;{_DefineBound}
-//Конструктор/деструктор
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadLayer.Create();
 begin
   inherited;
@@ -2103,8 +2103,8 @@ begin
   inherited;
 end;{Destroy}
 
-//Статистика объектов AutoCAD --------------------------------------------------
-//Конструктор/деструктор
+//РЎС‚Р°С‚РёСЃС‚РёРєР° РѕР±СЉРµРєС‚РѕРІ AutoCAD --------------------------------------------------
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TacadEntitiesStatistic.Create();
 begin
   inherited;
@@ -2117,7 +2117,7 @@ begin
   FCount := 0;
   inherited;
 end;{Destroy}
-//Методы диспетчеризаций свойств
+//РњРµС‚РѕРґС‹ РґРёСЃРїРµС‚С‡РµСЂРёР·Р°С†РёР№ СЃРІРѕР№СЃС‚РІ
 function TacadEntitiesStatistic._GetItem(const AIndex: Integer): RacadEntityType;
 begin                                   
   Result := PacadEntityType(FItems.List^[AIndex])^;
@@ -2128,7 +2128,7 @@ begin
   then raise TacadException.InvalidIndex(AIndex,Count-1);
   Result := PacadEntityType(FItems.List^[AIndex])^;
 end;{GetItem}
-//Добавление
+//Р”РѕР±Р°РІР»РµРЅРёРµ
 procedure TacadEntitiesStatistic.Add(const AEntityType: Integer; const AEntityName: String; const AUnknown: Boolean = False);
 var
   AIndex: Integer;
@@ -2155,7 +2155,7 @@ begin
   end;{else}
   FCount := FItems.Count;
 end;{Add}
-//Очистка
+//РћС‡РёСЃС‚РєР°
 procedure TacadEntitiesStatistic.Clear();
 var I: Integer;
 begin
@@ -2168,7 +2168,7 @@ begin
     FCount := 0;
   end;{if}
 end;{Clear}
-//Поиск
+//РџРѕРёСЃРє
 function TacadEntitiesStatistic.IndexOf(const AEntityType: Integer): Integer;
 var I: Integer;
 begin
@@ -2180,7 +2180,7 @@ begin
   end;{for}
 end;{IndexOf}
 
-//Приложение AutoCAD -----------------------------------------------------------
+//РџСЂРёР»РѕР¶РµРЅРёРµ AutoCAD -----------------------------------------------------------
 function TAutoCAD.GetLayer(const AIndex: Integer): TacadLayer;
 begin
   if (AIndex < 0) or (AIndex >= LayersCount)
@@ -2191,7 +2191,7 @@ function TAutoCAD._GetLayer(const AIndex: Integer): TacadLayer;
 begin
   Result := TacadLayer(FLayers.List^[AIndex]);
 end;{_GetCoord}
-//Конструктор/деструктор
+//РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ/РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 constructor TAutoCAD.Create();
 begin
   inherited;
@@ -2207,14 +2207,14 @@ begin
   _ClearLayers();
   inherited;
 end;{Destroy}
-//Извлечение слоя AutoCAD
+//РР·РІР»РµС‡РµРЅРёРµ СЃР»РѕСЏ AutoCAD
 procedure TAutoCAD._ExtractAutoCADLayer(const AacadLayer: IAcadLayer);
 var ANew: TacadLayer;
 begin
   if LayersCount = 0 then FLayers := TList.Create();
   ANew := TacadLayer.Create();
 
-  //Графический объект
+  //Р“СЂР°С„РёС‡РµСЃРєРёР№ РѕР±СЉРµРєС‚
   ANew.FBound       := acadBound();
   ANew.FCenter      := acadCoord3D();
   ANew.FVisible     := AacadLayer.LayerOn = True;
@@ -2229,7 +2229,7 @@ begin
   FLayers.Add(ANew);
   FLayersCount      := FLayers.Count;
 end;{_ExtractAutoCADLayer}
-//Поиск слоя
+//РџРѕРёСЃРє СЃР»РѕСЏ
 function TAutoCAD._FindLayer(const ALayerName: String): Integer;
 var I: Integer;
 begin
@@ -2240,7 +2240,7 @@ begin
     Result := I; Break;
   end;{for}
 end;{_FindLayer}
-//Уничтожение слоев
+//РЈРЅРёС‡С‚РѕР¶РµРЅРёРµ СЃР»РѕРµРІ
 procedure TAutoCAD._ClearLayers();
 var I: Integer;
 begin
@@ -2254,7 +2254,7 @@ begin
   //Bound
   _DefineBound();
 end;{_ClearLayers}
-//Определение глобального контура
+//РћРїСЂРµРґРµР»РµРЅРёРµ РіР»РѕР±Р°Р»СЊРЅРѕРіРѕ РєРѕРЅС‚СѓСЂР°
 procedure TAutoCAD._DefineBound();
 var I, J: Integer;
 begin
@@ -2273,7 +2273,7 @@ begin
     end;{for}
   end;{if}
 end;{_DefineBound}
-//Прорисовка
+//РџСЂРѕСЂРёСЃРѕРІРєР°
 procedure TAutoCAD.Draw(const ACanvas: TCanvas; const ACanvasBound: TRect);
 var
   I                     : Integer;
@@ -2298,7 +2298,7 @@ begin
     ARatio := (ACanvasBound.Right - ACanvasBound.Left)/(ACanvasBound.Bottom - ACanvasBound.Top);//=Canvas.Width/Canvas.Height
     ACubeHeight := CubeBound.Max[1]-CubeBound.Min[1];
     ACubeWidth := ACubeHeight * ARatio;
-    if ACubeWidth < CubeBound.Max[0]-CubeBound.Min[0] then//если "обрезка" по ширине
+    if ACubeWidth < CubeBound.Max[0]-CubeBound.Min[0] then//РµСЃР»Рё "РѕР±СЂРµР·РєР°" РїРѕ С€РёСЂРёРЅРµ
     begin
       ACubeWidth := CubeBound.Max[0]-CubeBound.Min[0];
       ACubeHeight := ACubeWidth / ARatio;
@@ -2311,23 +2311,23 @@ begin
       _Layers[I].DrawToCanvas(ACanvas, ANewCanvasBound, ANewCubeBound);
   end;{if}
 end;{Draw}
-//Очистка
+//РћС‡РёСЃС‚РєР°
 procedure TAutoCAD.Clear();
 begin
   Statistics.Clear();
   _ClearLayers();
 end;{Clear}
-//Импорт из файла AutoCAD
+//РРјРїРѕСЂС‚ РёР· С„Р°Р№Р»Р° AutoCAD
 function TAutoCAD.ImportFromAutoCADFile(const AFileName: String): Boolean;
 var
-  AApp       : IAcadApplication;   //Приложение AutoCAD
-  ADoc       : IAcadDocument;      //Активный документ AutoCAD
-  ALayers    : IAcadLayers;        //Слои AutoCAD
-  AObjects   : IAcadModelSpace;    //Объекты AutoCAD
-  AAcadObj   : IAcadEntity;        //Текущий объект AutoCAD
-  AObject    : TacadLayerObject;//Пользовательский объект
-  AClassRef  : TacadLayerObjectRef;//Ссылка на тип класса TacadLayerObject
-  ALayerIndex: Integer;            //Индекс слоя
+  AApp       : IAcadApplication;   //РџСЂРёР»РѕР¶РµРЅРёРµ AutoCAD
+  ADoc       : IAcadDocument;      //РђРєС‚РёРІРЅС‹Р№ РґРѕРєСѓРјРµРЅС‚ AutoCAD
+  ALayers    : IAcadLayers;        //РЎР»РѕРё AutoCAD
+  AObjects   : IAcadModelSpace;    //РћР±СЉРµРєС‚С‹ AutoCAD
+  AAcadObj   : IAcadEntity;        //РўРµРєСѓС‰РёР№ РѕР±СЉРµРєС‚ AutoCAD
+  AObject    : TacadLayerObject;//РџРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёР№ РѕР±СЉРµРєС‚
+  AClassRef  : TacadLayerObjectRef;//РЎСЃС‹Р»РєР° РЅР° С‚РёРї РєР»Р°СЃСЃР° TacadLayerObject
+  ALayerIndex: Integer;            //РРЅРґРµРєСЃ СЃР»РѕСЏ
   //
   I          : Integer;
 begin
@@ -2339,14 +2339,14 @@ begin
     AApp := IDispatch(CreateOleObject('AutoCAD.Application')) as IAcadApplication;
     try
       AApp.Visible := False;
-      //Активный документ ------------------------------------------------------
+      //РђРєС‚РёРІРЅС‹Р№ РґРѕРєСѓРјРµРЅС‚ ------------------------------------------------------
       if AApp.Documents.Count > 0 then AApp.Documents.Close();
       ADoc := AApp.Documents.Open(AFileName, True, Null);
-      //Слои -------------------------------------------------------------------
+      //РЎР»РѕРё -------------------------------------------------------------------
       ALayers := ADoc.Layers;
       for I := 0 to ALayers.Count - 1 do
         _ExtractAutoCADLayer(ALayers.Item(I) as IAcadLayer);
-      //Объекты слоя -----------------------------------------------------------
+      //РћР±СЉРµРєС‚С‹ СЃР»РѕСЏ -----------------------------------------------------------
       AObjects := ADoc.ModelSpace;
       for I := 0 to AObjects.Count - 1 do
       begin
@@ -2368,14 +2368,14 @@ begin
         end;{case}
         if AClassRef <> nil then
         begin
-          //Определение принадлежности объекта слою
+          //РћРїСЂРµРґРµР»РµРЅРёРµ РїСЂРёРЅР°РґР»РµР¶РЅРѕСЃС‚Рё РѕР±СЉРµРєС‚Р° СЃР»РѕСЋ
           ALayerIndex := _FindLayer(AAcadObj.Layer);
           if ALayerIndex <> -1 then
           begin
-            //Создание соответствующего объекта
+            //РЎРѕР·РґР°РЅРёРµ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РµРіРѕ РѕР±СЉРµРєС‚Р°
             AObject := AClassRef.Create();
             AObject.ExtractAcadEntity(AAcadObj, _Layers[ALayerIndex], nil);
-            //Обработка блока
+            //РћР±СЂР°Р±РѕС‚РєР° Р±Р»РѕРєР°
             if AObject is TacadBlock
             then TacadBlock(AObject).ExtractAcadEntityDn(_Layers[ALayerIndex], ADoc.Blocks);
             _Layers[ALayerIndex].Add(AObject);
@@ -2392,4 +2392,3 @@ begin
 end;{ImportFromAutoCADFile}
 
 end.
-
